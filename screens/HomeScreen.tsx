@@ -1,6 +1,9 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useCalendar } from "../context/CalendarContext";
+import { useMedication } from "../context/MedicationContext";
+import { useExercise } from "../context/ExerciseContext";
 
 interface HomeScreenProps {
   onNavigateToDogsList: () => void;
@@ -15,167 +18,182 @@ export default function HomeScreen({
   onNavigateToExercises,
   onNavigateToMedications,
 }: HomeScreenProps) {
+  const { appointments } = useCalendar();
+  const { medications } = useMedication();
+  const { exercises } = useExercise();
+
+  const now = new Date();
+
+  // Obtener próximas citas
+  const upcomingAppointments = appointments
+    .filter((apt) => new Date(apt.date) >= now)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 3);
+
+  // Obtener medicamentos activos de hoy
+  const todayMedications = medications
+    .filter((med) => med.isActive && med.durationDays > 0)
+    .slice(0, 3);
+
+  // Obtener ejercicios activos de hoy
+  const todayExercises = exercises.filter((ex) => ex.isActive).slice(0, 3);
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+    });
+  };
+
+  const getDaysUntil = (date: Date) => {
+    const diffTime = new Date(date).getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "Hoy";
+    if (diffDays === 1) return "Mañana";
+    return `En ${diffDays} días`;
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1">
+      <ScrollView className="flex-1 pb-20">
         {/* Header */}
-        <View className="bg-blue-600 pt-6 pb-8 px-6 rounded-b-3xl">
-          <Text className="text-white text-3xl font-bold mb-2">Hola! 👋</Text>
-          <Text className="text-blue-100 text-base">
-            Gestiona la salud de tus perritos
-          </Text>
-        </View>
-
-        {/* Cards de navegación rápida */}
-        <View className="px-6 mt-6">
-          <Text className="text-gray-800 text-xl font-bold mb-4">
-            Accesos rápidos
-          </Text>
-
-          <View className="gap-4">
-            {/* Mis Perros */}
-            <TouchableOpacity
-              onPress={onNavigateToDogsList}
-              className="bg-white rounded-2xl p-6 shadow-sm"
-            >
-              <View className="flex-row items-center">
-                <View className="w-14 h-14 bg-blue-100 rounded-full items-center justify-center mr-4">
-                  <Text className="text-3xl">🐕</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 text-lg font-semibold mb-1">
-                    Mis Perros
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Gestiona tus mascotas
-                  </Text>
-                </View>
-                <Text className="text-2xl text-gray-400">›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Calendario de Salud */}
-            <TouchableOpacity
-              onPress={onNavigateToCalendar}
-              className="bg-white rounded-2xl p-6 shadow-sm"
-            >
-              <View className="flex-row items-center">
-                <View className="w-14 h-14 bg-green-100 rounded-full items-center justify-center mr-4">
-                  <Text className="text-3xl">📅</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 text-lg font-semibold mb-1">
-                    Calendario
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Vacunas y controles
-                  </Text>
-                </View>
-                <Text className="text-2xl text-gray-400">›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Historial Médico */}
-            <TouchableOpacity className="bg-white rounded-2xl p-6 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-14 h-14 bg-purple-100 rounded-full items-center justify-center mr-4">
-                  <Text className="text-3xl">🏥</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 text-lg font-semibold mb-1">
-                    Historial Médico
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Consultas y tratamientos
-                  </Text>
-                </View>
-                <Text className="text-2xl text-gray-400">›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Recordatorios */}
-            <TouchableOpacity className="bg-white rounded-2xl p-6 shadow-sm">
-              <View className="flex-row items-center">
-                <View className="w-14 h-14 bg-orange-100 rounded-full items-center justify-center mr-4">
-                  <Text className="text-3xl">🔔</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 text-lg font-semibold mb-1">
-                    Recordatorios
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Próximas citas y eventos
-                  </Text>
-                </View>
-                <Text className="text-2xl text-gray-400">›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Medicamentos */}
-            <TouchableOpacity
-              onPress={onNavigateToMedications}
-              className="bg-white rounded-2xl p-6 shadow-sm"
-            >
-              <View className="flex-row items-center">
-                <View className="w-14 h-14 bg-pink-100 rounded-full items-center justify-center mr-4">
-                  <Text className="text-3xl">💊</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 text-lg font-semibold mb-1">
-                    Medicamentos
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Tratamientos y dosis
-                  </Text>
-                </View>
-                <Text className="text-2xl text-gray-400">›</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Ejercicios */}
-            <TouchableOpacity
-              onPress={onNavigateToExercises}
-              className="bg-white rounded-2xl p-6 shadow-sm"
-            >
-              <View className="flex-row items-center">
-                <View className="w-14 h-14 bg-teal-100 rounded-full items-center justify-center mr-4">
-                  <Text className="text-3xl">🏃</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-900 text-lg font-semibold mb-1">
-                    Ejercicios
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    Rutinas y actividad física
-                  </Text>
-                </View>
-                <Text className="text-2xl text-gray-400">›</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Sección de recordatorios próximos */}
-        <View className="px-6 mt-8 mb-6">
-          <Text className="text-gray-800 text-xl font-bold mb-4">
-            Próximos eventos
-          </Text>
-
-          <View className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
-            <View className="flex-row items-center mb-2">
-              <Text className="text-2xl mr-3">💉</Text>
-              <View className="flex-1">
-                <Text className="text-gray-900 font-semibold">
-                  Vacuna antirrábica
-                </Text>
-                <Text className="text-gray-600 text-sm mt-1">
-                  15 de enero, 2026
-                </Text>
-              </View>
+        <View className="bg-cyan-600 pt-6 pb-8 px-6 rounded-b-3xl">
+          <View className="flex-row items-center justify-between mb-2">
+            <View className="flex-1">
+              <Text className="text-white text-3xl font-bold mb-2">
+                Hola! 👋
+              </Text>
+              <Text className="text-blue-100 text-base">
+                Gestiona la salud de tus perritos
+              </Text>
             </View>
-            <Text className="text-blue-700 text-sm mt-2">Faltan 19 días</Text>
+            {/* Icono de notificaciones */}
+            <TouchableOpacity className="w-12 h-12 bg-cyan-700 rounded-full items-center justify-center">
+              <Text className="text-2xl">🔔</Text>
+            </TouchableOpacity>
           </View>
         </View>
+
+        {/* Próximas citas */}
+        {upcomingAppointments.length > 0 && (
+          <View className="px-6 mt-6">
+            <Text className="text-gray-800 text-xl font-bold mb-3">
+              📅 Próximas citas
+            </Text>
+            <View className="gap-3">
+              {upcomingAppointments.map((appointment) => (
+                <TouchableOpacity
+                  key={appointment.id}
+                  onPress={onNavigateToCalendar}
+                  className="bg-white rounded-2xl p-4 shadow-sm"
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center mr-3">
+                      <Text className="text-2xl">📅</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-gray-900 font-semibold mb-1">
+                        {appointment.dogName} - {appointment.type}
+                      </Text>
+                      <Text className="text-gray-600 text-sm">
+                        {formatDate(appointment.date)} • {appointment.time}
+                      </Text>
+                      <Text className="text-green-600 text-sm font-medium mt-1">
+                        {getDaysUntil(appointment.date)}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Medicamentos de hoy */}
+        {todayMedications.length > 0 && (
+          <View className="px-6 mt-6">
+            <Text className="text-gray-800 text-xl font-bold mb-3">
+              💊 Medicamentos activos
+            </Text>
+            <View className="gap-3">
+              {todayMedications.map((medication) => (
+                <TouchableOpacity
+                  key={medication.id}
+                  onPress={onNavigateToMedications}
+                  className="bg-white rounded-2xl p-4 shadow-sm"
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-12 h-12 bg-pink-100 rounded-xl items-center justify-center mr-3">
+                      <Text className="text-2xl">💊</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-gray-900 font-semibold mb-1">
+                        {medication.dogName} - {medication.name}
+                      </Text>
+                      <Text className="text-gray-600 text-sm">
+                        {medication.dosage} • Cada {medication.frequencyHours}h
+                      </Text>
+                      <Text className="text-pink-600 text-sm font-medium mt-1">
+                        🕒 {medication.scheduledTimes.join(", ")}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Ejercicios de hoy */}
+        {todayExercises.length > 0 && (
+          <View className="px-6 mt-6 mb-6">
+            <Text className="text-gray-800 text-xl font-bold mb-3">
+              🏃 Rutinas de hoy
+            </Text>
+            <View className="gap-3">
+              {todayExercises.map((exercise) => (
+                <TouchableOpacity
+                  key={exercise.id}
+                  onPress={onNavigateToExercises}
+                  className="bg-white rounded-2xl p-4 shadow-sm"
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-12 h-12 bg-teal-100 rounded-xl items-center justify-center mr-3">
+                      <Text className="text-2xl">🏃</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-gray-900 font-semibold mb-1">
+                        {exercise.dogName} - {exercise.type}
+                      </Text>
+                      <Text className="text-gray-600 text-sm">
+                        {exercise.durationMinutes} min • {exercise.timesPerDay}x
+                        al día
+                      </Text>
+                      <Text className="text-teal-600 text-sm font-medium mt-1">
+                        🕒 {exercise.scheduledTimes.join(", ")}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Mensaje si no hay eventos */}
+        {upcomingAppointments.length === 0 &&
+          todayMedications.length === 0 &&
+          todayExercises.length === 0 && (
+            <View className="px-6 mt-20 items-center">
+              <Text className="text-6xl mb-4">✨</Text>
+              <Text className="text-gray-500 text-lg text-center mb-2">
+                Todo tranquilo por ahora
+              </Text>
+              <Text className="text-gray-400 text-sm text-center">
+                No hay eventos próximos programados
+              </Text>
+            </View>
+          )}
       </ScrollView>
     </SafeAreaView>
   );

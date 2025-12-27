@@ -108,7 +108,7 @@ export default function AddEditDogScreen({
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-blue-600 pt-6 pb-6 px-6">
+      <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
             <Text className="text-white text-2xl">‹</Text>

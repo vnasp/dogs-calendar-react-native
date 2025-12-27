@@ -5,12 +5,15 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
   scheduleAppointmentNotification,
   cancelAppointmentNotifications,
   requestNotificationPermissions,
 } from "../utils/notificationService";
+
+const APPOINTMENTS_STORAGE_KEY = "@appointments_data";
 
 export type AppointmentType =
   | "control"
@@ -50,11 +53,68 @@ const CalendarContext = createContext<CalendarContextType | undefined>(
 
 export function CalendarProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Solicitar permisos de notificaciones al iniciar
+  // Solicitar permisos y cargar datos al iniciar
   useEffect(() => {
     requestNotificationPermissions();
+    loadAppointments();
   }, []);
+
+  // Guardar datos cuando cambian
+  useEffect(() => {
+    if (isLoaded) {
+      saveAppointments();
+    }
+  }, [appointments, isLoaded]);
+
+  const loadAppointments = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(APPOINTMENTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Convertir fechas de string a Date
+        const appointmentsWithDates = parsed.map((apt: any) => ({
+          ...apt,
+          date: new Date(apt.date),
+        }));
+        setAppointments(appointmentsWithDates);
+
+        // Reprogramar notificaciones para citas futuras
+        for (const apt of appointmentsWithDates) {
+          const appointmentDate = new Date(apt.date);
+          if (appointmentDate > new Date()) {
+            const notificationId = await scheduleAppointmentNotification(
+              apt.id,
+              apt.date,
+              apt.time,
+              apt.dogName,
+              appointmentTypeLabels[apt.type],
+              apt.notificationTime
+            );
+            if (notificationId && notificationId !== apt.notificationId) {
+              apt.notificationId = notificationId;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading appointments:", error);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveAppointments = async () => {
+    try {
+      await AsyncStorage.setItem(
+        APPOINTMENTS_STORAGE_KEY,
+        JSON.stringify(appointments)
+      );
+    } catch (error) {
+      console.error("Error saving appointments:", error);
+    }
+  };
 
   const addAppointment = async (appointment: Omit<Appointment, "id">) => {
     const newAppointment: Appointment = {

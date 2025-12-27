@@ -134,7 +134,7 @@ export default function AddEditExerciseScreen({
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-teal-600 pt-6 pb-6 px-6">
+      <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
             <Text className="text-white text-2xl">‹</Text>
@@ -357,7 +357,7 @@ export default function AddEditExerciseScreen({
         {/* Botón guardar */}
         <TouchableOpacity
           onPress={handleSave}
-          className="bg-teal-600 py-4 rounded-xl mb-8"
+          className="bg-purple-600 py-4 rounded-xl mb-8"
         >
           <Text className="text-white text-center font-bold text-lg">
             {isEditing ? "Guardar cambios" : "Crear rutina"}

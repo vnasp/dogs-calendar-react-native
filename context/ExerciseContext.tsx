@@ -5,12 +5,15 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
   scheduleExerciseNotifications,
   cancelExerciseNotifications,
   requestNotificationPermissions,
 } from "../utils/notificationService";
+
+const EXERCISES_STORAGE_KEY = "@exercises_data";
 
 export type ExerciseType =
   | "caminata"
@@ -95,11 +98,61 @@ export function calculateScheduledTimes(
 
 export function ExerciseProvider({ children }: { children: ReactNode }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Solicitar permisos de notificaciones al iniciar
+  // Solicitar permisos y cargar datos al iniciar
   useEffect(() => {
     requestNotificationPermissions();
+    loadExercises();
   }, []);
+
+  // Guardar datos cuando cambian
+  useEffect(() => {
+    if (isLoaded) {
+      saveExercises();
+    }
+  }, [exercises, isLoaded]);
+
+  const loadExercises = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(EXERCISES_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setExercises(parsed);
+
+        // Reprogramar notificaciones para ejercicios activos
+        for (const ex of parsed) {
+          if (ex.isActive) {
+            const notificationIds = await scheduleExerciseNotifications(
+              ex.id,
+              ex.scheduledTimes,
+              ex.dogName,
+              exerciseTypeLabels[ex.type],
+              ex.notificationTime
+            );
+            if (notificationIds.length > 0) {
+              ex.notificationIds = notificationIds;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading exercises:", error);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveExercises = async () => {
+    try {
+      await AsyncStorage.setItem(
+        EXERCISES_STORAGE_KEY,
+        JSON.stringify(exercises)
+      );
+    } catch (error) {
+      console.error("Error saving exercises:", error);
+    }
+  };
 
   const addExercise = async (exercise: Omit<Exercise, "id">) => {
     const exerciseId = Date.now().toString();

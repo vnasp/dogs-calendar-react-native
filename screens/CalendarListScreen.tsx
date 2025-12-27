@@ -71,7 +71,7 @@ export default function CalendarListScreen({
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-green-600 pt-6 pb-6 px-6">
+      <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
             <Text className="text-white text-2xl">‹</Text>
@@ -79,6 +79,14 @@ export default function CalendarListScreen({
           <Text className="text-white text-2xl font-bold flex-1">
             Calendario
           </Text>
+          {dogs.length > 0 && (
+            <TouchableOpacity
+              onPress={() => onNavigateToAddEdit()}
+              className="bg-white px-4 py-2 rounded-lg"
+            >
+              <Text className="text-cyan-600 font-semibold">+ Agregar</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Filtros */}
@@ -233,7 +241,7 @@ export default function CalendarListScreen({
         <View className="absolute bottom-6 right-6">
           <TouchableOpacity
             onPress={() => onNavigateToAddEdit()}
-            className="w-16 h-16 bg-green-600 rounded-full items-center justify-center shadow-lg"
+            className="w-16 h-16 bg-purple-600 rounded-full items-center justify-center shadow-lg"
           >
             <Text className="text-white text-3xl font-light">+</Text>
           </TouchableOpacity>

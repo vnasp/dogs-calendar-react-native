@@ -5,12 +5,15 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
   scheduleMedicationNotifications,
   cancelMedicationNotifications,
   requestNotificationPermissions,
 } from "../utils/notificationService";
+
+const MEDICATIONS_STORAGE_KEY = "@medications_data";
 
 export interface Medication {
   id: string;
@@ -79,11 +82,71 @@ export function calculateEndDate(startDate: Date, durationDays: number): Date {
 
 export function MedicationProvider({ children }: { children: ReactNode }) {
   const [medications, setMedications] = useState<Medication[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Solicitar permisos de notificaciones al iniciar
+  // Solicitar permisos y cargar datos al iniciar
   useEffect(() => {
     requestNotificationPermissions();
+    loadMedications();
   }, []);
+
+  // Guardar datos cuando cambian
+  useEffect(() => {
+    if (isLoaded) {
+      saveMedications();
+    }
+  }, [medications, isLoaded]);
+
+  const loadMedications = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(MEDICATIONS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Convertir fechas de string a Date
+        const medicationsWithDates = parsed.map((med: any) => ({
+          ...med,
+          startDate: new Date(med.startDate),
+          endDate: new Date(med.endDate),
+        }));
+        setMedications(medicationsWithDates);
+
+        // Reprogramar notificaciones para medicamentos activos
+        for (const med of medicationsWithDates) {
+          if (med.isActive && new Date(med.endDate) > new Date()) {
+            const notificationIds = await scheduleMedicationNotifications(
+              med.id,
+              med.startDate,
+              med.startTime,
+              med.scheduledTimes,
+              med.durationDays,
+              med.dogName,
+              med.name,
+              med.dosage,
+              med.notificationTime
+            );
+            if (notificationIds.length > 0) {
+              med.notificationIds = notificationIds;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading medications:", error);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveMedications = async () => {
+    try {
+      await AsyncStorage.setItem(
+        MEDICATIONS_STORAGE_KEY,
+        JSON.stringify(medications)
+      );
+    } catch (error) {
+      console.error("Error saving medications:", error);
+    }
+  };
 
   const addMedication = async (medication: Omit<Medication, "id">) => {
     const medicationId = Date.now().toString();

@@ -13,11 +13,13 @@ import { useDogs } from "../context/DogsContext";
 interface DogsListScreenProps {
   onNavigateToAddEdit: (dogId?: string) => void;
   onNavigateBack: () => void;
+  onNavigateToMedicalHistory: (dogId: string) => void;
 }
 
 export default function DogsListScreen({
   onNavigateToAddEdit,
   onNavigateBack,
+  onNavigateToMedicalHistory,
 }: DogsListScreenProps) {
   const { dogs, deleteDog } = useDogs();
 
@@ -49,7 +51,7 @@ export default function DogsListScreen({
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-blue-600 pt-6 pb-6 px-6">
+      <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
             <Text className="text-white text-2xl">‹</Text>
@@ -124,6 +126,14 @@ export default function DogsListScreen({
                 {/* Botones de acción */}
                 <View className="flex-row gap-2 mt-4">
                   <TouchableOpacity
+                    onPress={() => onNavigateToMedicalHistory(dog.id)}
+                    className="flex-1 bg-purple-50 py-3 rounded-xl"
+                  >
+                    <Text className="text-purple-600 text-center font-semibold">
+                      🏥 Historial
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     onPress={() => onNavigateToAddEdit(dog.id)}
                     className="flex-1 bg-blue-50 py-3 rounded-xl"
                   >
@@ -150,7 +160,7 @@ export default function DogsListScreen({
       <View className="absolute bottom-6 right-6">
         <TouchableOpacity
           onPress={() => onNavigateToAddEdit()}
-          className="w-16 h-16 bg-blue-600 rounded-full items-center justify-center shadow-lg"
+          className="w-16 h-16 bg-purple-600 rounded-full items-center justify-center shadow-lg"
         >
           <Text className="text-white text-3xl font-light">+</Text>
         </TouchableOpacity>

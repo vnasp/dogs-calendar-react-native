@@ -11,6 +11,8 @@ import ExercisesListScreen from "./screens/ExercisesListScreen";
 import AddEditExerciseScreen from "./screens/AddEditExerciseScreen";
 import MedicationsListScreen from "./screens/MedicationsListScreen";
 import AddEditMedicationScreen from "./screens/AddEditMedicationScreen";
+import MedicalHistoryScreen from "./screens/MedicalHistoryScreen";
+import Footer from "./components/Footer";
 import { DogsProvider } from "./context/DogsContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ExerciseProvider } from "./context/ExerciseContext";
@@ -27,7 +29,8 @@ type Screen =
   | "exercises"
   | "addEditExercise"
   | "medications"
-  | "addEditMedication";
+  | "addEditMedication"
+  | "medicalHistory";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("loading");
@@ -41,6 +44,7 @@ export default function App() {
   const [editingMedicationId, setEditingMedicationId] = useState<
     string | undefined
   >();
+  const [selectedDogId, setSelectedDogId] = useState<string | undefined>();
 
   useEffect(() => {
     // Simula el tiempo de carga
@@ -74,6 +78,11 @@ export default function App() {
     setCurrentScreen("addEditMedication");
   };
 
+  const navigateToMedicalHistory = (dogId: string) => {
+    setSelectedDogId(dogId);
+    setCurrentScreen("medicalHistory");
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case "loading":
@@ -92,6 +101,7 @@ export default function App() {
           <DogsListScreen
             onNavigateToAddEdit={navigateToAddEditDog}
             onNavigateBack={navigateToHome}
+            onNavigateToMedicalHistory={navigateToMedicalHistory}
           />
         );
       case "addEditDog":
@@ -143,6 +153,13 @@ export default function App() {
             onNavigateBack={navigateToMedications}
           />
         );
+      case "medicalHistory":
+        return (
+          <MedicalHistoryScreen
+            dogId={selectedDogId!}
+            onNavigateBack={navigateToDogsList}
+          />
+        );
       default:
         return (
           <HomeScreen
@@ -162,6 +179,14 @@ export default function App() {
           <ExerciseProvider>
             <MedicationProvider>
               {renderScreen()}
+              <Footer
+                currentScreen={currentScreen}
+                onNavigateToHome={navigateToHome}
+                onNavigateToDogsList={navigateToDogsList}
+                onNavigateToCalendar={navigateToCalendar}
+                onNavigateToMedications={navigateToMedications}
+                onNavigateToExercises={navigateToExercises}
+              />
               <StatusBar style="light" />
             </MedicationProvider>
           </ExerciseProvider>

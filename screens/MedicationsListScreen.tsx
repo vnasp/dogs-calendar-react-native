@@ -69,7 +69,7 @@ export default function MedicationsListScreen({
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-pink-600 pt-6 pb-6 px-6">
+      <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center justify-between mb-2">
           <View className="flex-row items-center flex-1">
             <TouchableOpacity onPress={onNavigateBack} className="mr-3">
@@ -77,17 +77,29 @@ export default function MedicationsListScreen({
             </TouchableOpacity>
             <Text className="text-white text-2xl font-bold">Medicamentos</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => onNavigateToAddEdit()}
-            className="bg-white px-4 py-2 rounded-lg"
-          >
-            <Text className="text-pink-600 font-semibold">+ Agregar</Text>
-          </TouchableOpacity>
+          {dogs.length > 0 && (
+            <TouchableOpacity
+              onPress={() => onNavigateToAddEdit()}
+              className="bg-white px-4 py-2 rounded-lg"
+            >
+              <Text className="text-cyan-600 font-semibold">+ Agregar</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6">
-        {medications.length === 0 ? (
+        {dogs.length === 0 ? (
+          <View className="items-center justify-center py-20">
+            <Text className="text-6xl mb-4">🐕</Text>
+            <Text className="text-gray-500 text-lg text-center mb-2">
+              Primero agrega un perro
+            </Text>
+            <Text className="text-gray-400 text-sm text-center">
+              Necesitas tener perros registrados para agregar medicamentos
+            </Text>
+          </View>
+        ) : medications.length === 0 ? (
           <View className="items-center justify-center py-20">
             <Text className="text-6xl mb-4">💊</Text>
             <Text className="text-gray-500 text-lg text-center mb-2">
