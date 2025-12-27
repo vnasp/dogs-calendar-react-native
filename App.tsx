@@ -9,9 +9,12 @@ import CalendarListScreen from "./screens/CalendarListScreen";
 import AddEditAppointmentScreen from "./screens/AddEditAppointmentScreen";
 import ExercisesListScreen from "./screens/ExercisesListScreen";
 import AddEditExerciseScreen from "./screens/AddEditExerciseScreen";
+import MedicationsListScreen from "./screens/MedicationsListScreen";
+import AddEditMedicationScreen from "./screens/AddEditMedicationScreen";
 import { DogsProvider } from "./context/DogsContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ExerciseProvider } from "./context/ExerciseContext";
+import { MedicationProvider } from "./context/MedicationContext";
 import "./global.css";
 
 type Screen =
@@ -22,7 +25,9 @@ type Screen =
   | "calendar"
   | "addEditAppointment"
   | "exercises"
-  | "addEditExercise";
+  | "addEditExercise"
+  | "medications"
+  | "addEditMedication";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("loading");
@@ -31,6 +36,9 @@ export default function App() {
     string | undefined
   >();
   const [editingExerciseId, setEditingExerciseId] = useState<
+    string | undefined
+  >();
+  const [editingMedicationId, setEditingMedicationId] = useState<
     string | undefined
   >();
 
@@ -47,6 +55,7 @@ export default function App() {
   const navigateToDogsList = () => setCurrentScreen("dogsList");
   const navigateToCalendar = () => setCurrentScreen("calendar");
   const navigateToExercises = () => setCurrentScreen("exercises");
+  const navigateToMedications = () => setCurrentScreen("medications");
   const navigateToAddEditDog = (dogId?: string) => {
     setEditingDogId(dogId);
     setCurrentScreen("addEditDog");
@@ -60,6 +69,11 @@ export default function App() {
     setCurrentScreen("addEditExercise");
   };
 
+  const navigateToAddEditMedication = (medicationId?: string) => {
+    setEditingMedicationId(medicationId);
+    setCurrentScreen("addEditMedication");
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case "loading":
@@ -70,6 +84,7 @@ export default function App() {
             onNavigateToDogsList={navigateToDogsList}
             onNavigateToCalendar={navigateToCalendar}
             onNavigateToExercises={navigateToExercises}
+            onNavigateToMedications={navigateToMedications}
           />
         );
       case "dogsList":
@@ -114,12 +129,27 @@ export default function App() {
             onNavigateBack={navigateToExercises}
           />
         );
+      case "medications":
+        return (
+          <MedicationsListScreen
+            onNavigateToAddEdit={navigateToAddEditMedication}
+            onNavigateBack={navigateToHome}
+          />
+        );
+      case "addEditMedication":
+        return (
+          <AddEditMedicationScreen
+            medicationId={editingMedicationId}
+            onNavigateBack={navigateToMedications}
+          />
+        );
       default:
         return (
           <HomeScreen
             onNavigateToDogsList={navigateToDogsList}
             onNavigateToCalendar={navigateToCalendar}
             onNavigateToExercises={navigateToExercises}
+            onNavigateToMedications={navigateToMedications}
           />
         );
     }
@@ -130,8 +160,10 @@ export default function App() {
       <DogsProvider>
         <CalendarProvider>
           <ExerciseProvider>
-            {renderScreen()}
-            <StatusBar style="light" />
+            <MedicationProvider>
+              {renderScreen()}
+              <StatusBar style="light" />
+            </MedicationProvider>
           </ExerciseProvider>
         </CalendarProvider>
       </DogsProvider>

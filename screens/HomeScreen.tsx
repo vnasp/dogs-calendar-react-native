@@ -6,12 +6,14 @@ interface HomeScreenProps {
   onNavigateToDogsList: () => void;
   onNavigateToCalendar: () => void;
   onNavigateToExercises: () => void;
+  onNavigateToMedications: () => void;
 }
 
 export default function HomeScreen({
   onNavigateToDogsList,
   onNavigateToCalendar,
   onNavigateToExercises,
+  onNavigateToMedications,
 }: HomeScreenProps) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -110,7 +112,10 @@ export default function HomeScreen({
             </TouchableOpacity>
 
             {/* Medicamentos */}
-            <TouchableOpacity className="bg-white rounded-2xl p-6 shadow-sm">
+            <TouchableOpacity
+              onPress={onNavigateToMedications}
+              className="bg-white rounded-2xl p-6 shadow-sm"
+            >
               <View className="flex-row items-center">
                 <View className="w-14 h-14 bg-pink-100 rounded-full items-center justify-center mr-4">
                   <Text className="text-3xl">💊</Text>

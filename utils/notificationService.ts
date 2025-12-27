@@ -8,6 +8,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -103,6 +105,7 @@ export async function scheduleAppointmentNotification(
         sound: true,
       },
       trigger: {
+        type: "date" as const,
         date: notificationDate,
       },
     });
@@ -181,6 +184,7 @@ export async function scheduleExerciseNotifications(
           sound: true,
         },
         trigger: {
+          type: "calendar" as const,
           hour: notificationDate.getHours(),
           minute: notificationDate.getMinutes(),
           repeats: true, // Repetir diariamente
@@ -208,6 +212,92 @@ export async function cancelExerciseNotifications(
       await Notifications.cancelScheduledNotificationAsync(notificationId);
     } catch (error) {
       console.error("Error al cancelar notificación de ejercicio:", error);
+    }
+  }
+}
+
+// Programar notificaciones para medicamentos (durante la duración del tratamiento)
+export async function scheduleMedicationNotifications(
+  medicationId: string,
+  startDate: Date,
+  startTime: string,
+  scheduledTimes: string[], // Horarios del día en formato HH:mm
+  durationDays: number,
+  dogName: string,
+  medicationName: string,
+  dosage: string,
+  notificationTime: NotificationTime
+): Promise<string[]> {
+  const minutes = getMinutesFromNotificationTime(notificationTime);
+
+  if (minutes === null || scheduledTimes.length === 0) {
+    return [];
+  }
+
+  const notificationIds: string[] = [];
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + durationDays);
+
+  // Programar notificaciones para cada día del tratamiento
+  for (let day = 0; day < durationDays; day++) {
+    const currentDate = new Date(startDate);
+    currentDate.setDate(currentDate.getDate() + day);
+
+    for (const scheduledTime of scheduledTimes) {
+      try {
+        const [hours, mins] = scheduledTime.split(":").map(Number);
+
+        // Establecer la hora de la dosis
+        const medicationDateTime = new Date(currentDate);
+        medicationDateTime.setHours(hours, mins, 0, 0);
+
+        // Calcular el momento de la notificación
+        const notificationDate = new Date(
+          medicationDateTime.getTime() - minutes * 60 * 1000
+        );
+
+        // Solo programar si es en el futuro
+        if (notificationDate > new Date()) {
+          const notificationId = await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `💊 Medicamento: ${dogName}`,
+              body: `${medicationName} - ${dosage} a las ${scheduledTime}`,
+              data: {
+                medicationId,
+                scheduledTime,
+                date: currentDate.toISOString(),
+              },
+              sound: true,
+            },
+            trigger: {
+              type: "date" as const,
+              date: notificationDate,
+            },
+          });
+
+          notificationIds.push(notificationId);
+        }
+      } catch (error) {
+        console.error(
+          `Error al programar notificación de medicamento para día ${day}, hora ${scheduledTime}:`,
+          error
+        );
+      }
+    }
+  }
+
+  return notificationIds;
+}
+
+// Cancelar todas las notificaciones de un medicamento
+export async function cancelMedicationNotifications(
+  notificationIds: string[]
+): Promise<void> {
+  for (const notificationId of notificationIds) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+    } catch (error) {
+      console.error("Error al cancelar notificación de medicamento:", error);
     }
   }
 }
