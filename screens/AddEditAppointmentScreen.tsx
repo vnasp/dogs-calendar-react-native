@@ -18,6 +18,9 @@ import {
   appointmentTypeIcons,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
+import NotificationSelector, {
+  NotificationTime,
+} from "../components/NotificationSelector";
 
 interface AddEditAppointmentScreenProps {
   appointmentId?: string;
@@ -47,6 +50,9 @@ export default function AddEditAppointmentScreen({
     existingAppointment?.type || "control"
   );
   const [notes, setNotes] = useState(existingAppointment?.notes || "");
+  const [notificationTime, setNotificationTime] = useState<NotificationTime>(
+    existingAppointment?.notificationTime || "1day"
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -80,6 +86,7 @@ export default function AddEditAppointmentScreen({
       time,
       type,
       notes: notes.trim(),
+      notificationTime,
     };
 
     if (isEditing && appointmentId) {
@@ -240,6 +247,15 @@ export default function AddEditAppointmentScreen({
               onChange={handleTimeChange}
             />
           )}
+        </View>
+
+        {/* Recordatorio */}
+        <View className="mb-4">
+          <NotificationSelector
+            selectedTime={notificationTime}
+            onSelectTime={setNotificationTime}
+            title="Recordarme"
+          />
         </View>
 
         {/* Notas */}

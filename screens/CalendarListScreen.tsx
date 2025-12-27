@@ -8,6 +8,7 @@ import {
   appointmentTypeIcons,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
+import { notificationLabels } from "../components/NotificationSelector";
 
 interface CalendarListScreenProps {
   onNavigateToAddEdit: (appointmentId?: string) => void;
@@ -188,6 +189,12 @@ export default function CalendarListScreen({
                         🕐 {appointment.time}
                       </Text>
                     </View>
+                    {appointment.notificationTime &&
+                      appointment.notificationTime !== "none" && (
+                        <Text className="text-blue-600 text-sm mt-1">
+                          🔔 {notificationLabels[appointment.notificationTime]}
+                        </Text>
+                      )}
                     {appointment.notes && (
                       <Text className="text-gray-500 text-sm mt-1">
                         {appointment.notes}

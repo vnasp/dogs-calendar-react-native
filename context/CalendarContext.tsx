@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
+import { NotificationTime } from "../components/NotificationSelector";
 
 export type AppointmentType =
   | "control"
@@ -18,6 +19,7 @@ export interface Appointment {
   time: string;
   type: AppointmentType;
   notes?: string;
+  notificationTime: NotificationTime;
 }
 
 interface CalendarContextType {
