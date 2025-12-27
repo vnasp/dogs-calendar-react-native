@@ -2,7 +2,15 @@ import React from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function HomeScreen() {
+interface HomeScreenProps {
+  onNavigateToDogsList: () => void;
+  onNavigateToCalendar: () => void;
+}
+
+export default function HomeScreen({
+  onNavigateToDogsList,
+  onNavigateToCalendar,
+}: HomeScreenProps) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView className="flex-1">
@@ -22,7 +30,10 @@ export default function HomeScreen() {
 
           <View className="gap-4">
             {/* Mis Perros */}
-            <TouchableOpacity className="bg-white rounded-2xl p-6 shadow-sm">
+            <TouchableOpacity
+              onPress={onNavigateToDogsList}
+              className="bg-white rounded-2xl p-6 shadow-sm"
+            >
               <View className="flex-row items-center">
                 <View className="w-14 h-14 bg-blue-100 rounded-full items-center justify-center mr-4">
                   <Text className="text-3xl">🐕</Text>
@@ -40,7 +51,10 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             {/* Calendario de Salud */}
-            <TouchableOpacity className="bg-white rounded-2xl p-6 shadow-sm">
+            <TouchableOpacity
+              onPress={onNavigateToCalendar}
+              className="bg-white rounded-2xl p-6 shadow-sm"
+            >
               <View className="flex-row items-center">
                 <View className="w-14 h-14 bg-green-100 rounded-full items-center justify-center mr-4">
                   <Text className="text-3xl">📅</Text>
