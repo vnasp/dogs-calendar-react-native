@@ -18,6 +18,7 @@ import {
   appointmentTypeIcons,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
+import PrimaryButton from "../components/PrimaryButton";
 import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
@@ -276,14 +277,10 @@ export default function AddEditAppointmentScreen({
         </View>
 
         {/* Botón guardar */}
-        <TouchableOpacity
+        <PrimaryButton
           onPress={handleSave}
-          className="bg-purple-600 py-4 rounded-xl mb-8"
-        >
-          <Text className="text-white text-center font-bold text-lg">
-            {isEditing ? "Guardar cambios" : "Agendar cita"}
-          </Text>
-        </TouchableOpacity>
+          text={isEditing ? "Guardar cambios" : "Agendar cita"}
+        />
       </ScrollView>
     </SafeAreaView>
   );

@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useMedication } from "../context/MedicationContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
+import HeaderAddButton from "../components/HeaderAddButton";
 
 interface MedicationsListScreenProps {
   onNavigateToAddEdit: (medicationId?: string) => void;
@@ -78,12 +79,7 @@ export default function MedicationsListScreen({
             <Text className="text-white text-2xl font-bold">Medicamentos</Text>
           </View>
           {dogs.length > 0 && (
-            <TouchableOpacity
-              onPress={() => onNavigateToAddEdit()}
-              className="bg-white px-4 py-2 rounded-lg"
-            >
-              <Text className="text-cyan-600 font-semibold">+ Agregar</Text>
-            </TouchableOpacity>
+            <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
           )}
         </View>
       </View>

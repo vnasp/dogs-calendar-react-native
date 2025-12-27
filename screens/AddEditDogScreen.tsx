@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useDogs } from "../context/DogsContext";
+import PrimaryButton from "../components/PrimaryButton";
 
 interface AddEditDogScreenProps {
   dogId?: string;
@@ -264,14 +265,10 @@ export default function AddEditDogScreen({
         </View>
 
         {/* Botón guardar */}
-        <TouchableOpacity
+        <PrimaryButton
           onPress={handleSave}
-          className="bg-blue-600 py-4 rounded-xl mb-8"
-        >
-          <Text className="text-white text-center font-bold text-lg">
-            {isEditing ? "Guardar cambios" : "Agregar perro"}
-          </Text>
-        </TouchableOpacity>
+          text={isEditing ? "Guardar cambios" : "Agregar perro"}
+        />
       </ScrollView>
     </SafeAreaView>
   );

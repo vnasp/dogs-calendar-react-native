@@ -9,6 +9,7 @@ import {
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
+import HeaderAddButton from "../components/HeaderAddButton";
 
 interface CalendarListScreenProps {
   onNavigateToAddEdit: (appointmentId?: string) => void;
@@ -80,12 +81,7 @@ export default function CalendarListScreen({
             Calendario
           </Text>
           {dogs.length > 0 && (
-            <TouchableOpacity
-              onPress={() => onNavigateToAddEdit()}
-              className="bg-white px-4 py-2 rounded-lg"
-            >
-              <Text className="text-cyan-600 font-semibold">+ Agregar</Text>
-            </TouchableOpacity>
+            <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
           )}
         </View>
 
@@ -238,7 +234,7 @@ export default function CalendarListScreen({
 
       {/* Botón flotante para agregar */}
       {dogs.length > 0 && (
-        <View className="absolute bottom-6 right-6">
+        <View className="absolute bottom-24 right-6">
           <TouchableOpacity
             onPress={() => onNavigateToAddEdit()}
             className="w-16 h-16 bg-purple-600 rounded-full items-center justify-center shadow-lg"

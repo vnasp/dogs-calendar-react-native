@@ -52,13 +52,14 @@ export default function DogsListScreen({
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-2">
-          <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <Text className="text-white text-2xl">‹</Text>
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            Mis Perros
-          </Text>
+        <View className="flex-row items-center justify-between mb-2">
+          <View className="flex-row items-center flex-1">
+            <TouchableOpacity onPress={onNavigateBack} className="mr-3">
+              <Text className="text-white text-2xl">‹</Text>
+            </TouchableOpacity>
+            <Text className="text-white text-2xl font-bold">Mis Perros</Text>
+          </View>
+          <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
         </View>
       </View>
 
@@ -155,16 +156,6 @@ export default function DogsListScreen({
           </View>
         )}
       </ScrollView>
-
-      {/* Botón flotante para agregar */}
-      <View className="absolute bottom-6 right-6">
-        <TouchableOpacity
-          onPress={() => onNavigateToAddEdit()}
-          className="w-16 h-16 bg-purple-600 rounded-full items-center justify-center shadow-lg"
-        >
-          <Text className="text-white text-3xl font-light">+</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }

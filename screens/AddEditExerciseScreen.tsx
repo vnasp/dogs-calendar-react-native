@@ -20,6 +20,9 @@ import { useDogs } from "../context/DogsContext";
 import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
+import PrimaryButton from "../components/PrimaryButton";
+  NotificationTime,
+} from "../components/NotificationSelector";
 
 interface AddEditExerciseScreenProps {
   exerciseId?: string;
@@ -355,14 +358,10 @@ export default function AddEditExerciseScreen({
         </View>
 
         {/* Botón guardar */}
-        <TouchableOpacity
+        <PrimaryButton
           onPress={handleSave}
-          className="bg-purple-600 py-4 rounded-xl mb-8"
-        >
-          <Text className="text-white text-center font-bold text-lg">
-            {isEditing ? "Guardar cambios" : "Crear rutina"}
-          </Text>
-        </TouchableOpacity>
+          text={isEditing ? "Guardar cambios" : "Crear rutina"}
+        />
       </ScrollView>
     </SafeAreaView>
   );

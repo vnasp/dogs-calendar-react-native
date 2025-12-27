@@ -18,6 +18,7 @@ import { useDogs } from "../context/DogsContext";
 import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
+import PrimaryButton from "../components/PrimaryButton";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 interface AddEditMedicationScreenProps {
@@ -446,14 +447,10 @@ export default function AddEditMedicationScreen({
         </View>
 
         {/* Botón guardar */}
-        <TouchableOpacity
+        <PrimaryButton
           onPress={handleSave}
-          className="bg-purple-600 py-4 rounded-xl mb-8"
-        >
-          <Text className="text-white text-center font-bold text-lg">
-            {isEditing ? "Guardar cambios" : "Crear medicamento"}
-          </Text>
-        </TouchableOpacity>
+          text={isEditing ? "Guardar cambios" : "Crear medicamento"}
+        />
       </ScrollView>
     </SafeAreaView>
   );
