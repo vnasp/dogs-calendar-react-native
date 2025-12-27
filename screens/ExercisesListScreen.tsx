@@ -201,18 +201,6 @@ export default function ExercisesListScreen({
           </View>
         )}
       </ScrollView>
-
-      {/* Botón flotante para agregar */}
-      {dogs.length > 0 && (
-        <View className="absolute bottom-24 right-6">
-          <TouchableOpacity
-            onPress={() => onNavigateToAddEdit()}
-            className="w-16 h-16 bg-purple-600 rounded-full items-center justify-center shadow-lg"
-          >
-            <Text className="text-white text-3xl font-light">+</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
