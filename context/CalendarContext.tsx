@@ -1,5 +1,16 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 import { NotificationTime } from "../components/NotificationSelector";
+import {
+  scheduleAppointmentNotification,
+  cancelAppointmentNotifications,
+  requestNotificationPermissions,
+} from "../utils/notificationService";
 
 export type AppointmentType =
   | "control"
@@ -20,6 +31,7 @@ export interface Appointment {
   type: AppointmentType;
   notes?: string;
   notificationTime: NotificationTime;
+  notificationId?: string;
 }
 
 interface CalendarContextType {
@@ -39,26 +51,74 @@ const CalendarContext = createContext<CalendarContextType | undefined>(
 export function CalendarProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  const addAppointment = (appointment: Omit<Appointment, "id">) => {
+  // Solicitar permisos de notificaciones al iniciar
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
+
+  const addAppointment = async (appointment: Omit<Appointment, "id">) => {
     const newAppointment: Appointment = {
       ...appointment,
       id: Date.now().toString(),
     };
+
+    // Programar notificación
+    const notificationId = await scheduleAppointmentNotification(
+      newAppointment.id,
+      newAppointment.date,
+      newAppointment.time,
+      newAppointment.dogName,
+      appointmentTypeLabels[newAppointment.type],
+      newAppointment.notificationTime
+    );
+
+    if (notificationId) {
+      newAppointment.notificationId = notificationId;
+    }
+
     setAppointments([...appointments, newAppointment]);
   };
 
-  const updateAppointment = (
+  const updateAppointment = async (
     id: string,
     updatedAppointment: Omit<Appointment, "id">
   ) => {
+    // Cancelar notificación anterior
+    const existingAppointment = appointments.find((apt) => apt.id === id);
+    if (existingAppointment?.notificationId) {
+      await cancelAppointmentNotifications(existingAppointment.notificationId);
+    }
+
+    // Programar nueva notificación
+    const notificationId = await scheduleAppointmentNotification(
+      id,
+      updatedAppointment.date,
+      updatedAppointment.time,
+      updatedAppointment.dogName,
+      appointmentTypeLabels[updatedAppointment.type],
+      updatedAppointment.notificationTime
+    );
+
+    const finalAppointment = {
+      ...updatedAppointment,
+      id,
+      notificationId: notificationId || undefined,
+    };
+
     setAppointments(
       appointments.map((appointment) =>
-        appointment.id === id ? { ...updatedAppointment, id } : appointment
+        appointment.id === id ? finalAppointment : appointment
       )
     );
   };
 
-  const deleteAppointment = (id: string) => {
+  const deleteAppointment = async (id: string) => {
+    // Cancelar notificación
+    const appointment = appointments.find((apt) => apt.id === id);
+    if (appointment?.notificationId) {
+      await cancelAppointmentNotifications(appointment.notificationId);
+    }
+
     setAppointments(
       appointments.filter((appointment) => appointment.id !== id)
     );

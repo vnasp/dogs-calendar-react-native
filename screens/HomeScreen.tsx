@@ -5,11 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 interface HomeScreenProps {
   onNavigateToDogsList: () => void;
   onNavigateToCalendar: () => void;
+  onNavigateToExercises: () => void;
 }
 
 export default function HomeScreen({
   onNavigateToDogsList,
   onNavigateToCalendar,
+  onNavigateToExercises,
 }: HomeScreenProps) {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -126,7 +128,10 @@ export default function HomeScreen({
             </TouchableOpacity>
 
             {/* Ejercicios */}
-            <TouchableOpacity className="bg-white rounded-2xl p-6 shadow-sm">
+            <TouchableOpacity
+              onPress={onNavigateToExercises}
+              className="bg-white rounded-2xl p-6 shadow-sm"
+            >
               <View className="flex-row items-center">
                 <View className="w-14 h-14 bg-teal-100 rounded-full items-center justify-center mr-4">
                   <Text className="text-3xl">🏃</Text>

@@ -29,7 +29,7 @@ export default function CalendarListScreen({
       {
         text: "Eliminar",
         style: "destructive",
-        onPress: () => deleteAppointment(id),
+        onPress: async () => await deleteAppointment(id),
       },
     ]);
   };

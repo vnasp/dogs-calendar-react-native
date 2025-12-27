@@ -1,0 +1,213 @@
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+import { NotificationTime } from "../components/NotificationSelector";
+
+// Configuración de cómo se muestran las notificaciones cuando la app está en primer plano
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+// Solicitar permisos de notificaciones
+export async function requestNotificationPermissions(): Promise<boolean> {
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== "granted") {
+    return false;
+  }
+
+  // Configurar el canal de notificaciones para Android
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "Recordatorios de Citas",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#3B82F6",
+    });
+  }
+
+  return true;
+}
+
+// Calcular los minutos antes de la cita basado en NotificationTime
+function getMinutesFromNotificationTime(
+  notificationTime: NotificationTime
+): number | null {
+  switch (notificationTime) {
+    case "none":
+      return null;
+    case "15min":
+      return 15;
+    case "30min":
+      return 30;
+    case "1hour":
+      return 60;
+    case "2hours":
+      return 120;
+    case "1day":
+      return 1440; // 24 * 60
+    case "2days":
+      return 2880; // 48 * 60
+    case "1week":
+      return 10080; // 7 * 24 * 60
+    default:
+      return null;
+  }
+}
+
+// Programar una notificación para una cita
+export async function scheduleAppointmentNotification(
+  appointmentId: string,
+  appointmentDate: Date,
+  appointmentTime: string,
+  dogName: string,
+  appointmentType: string,
+  notificationTime: NotificationTime
+): Promise<string | null> {
+  const minutes = getMinutesFromNotificationTime(notificationTime);
+
+  if (minutes === null) {
+    return null;
+  }
+
+  // Combinar fecha y hora
+  const [hours, mins] = appointmentTime.split(":").map(Number);
+  const appointmentDateTime = new Date(appointmentDate);
+  appointmentDateTime.setHours(hours, mins, 0, 0);
+
+  // Calcular el momento de la notificación
+  const notificationDate = new Date(
+    appointmentDateTime.getTime() - minutes * 60 * 1000
+  );
+
+  // Solo programar si es en el futuro
+  if (notificationDate <= new Date()) {
+    return null;
+  }
+
+  try {
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `🐕 Recordatorio: ${dogName}`,
+        body: `${appointmentType} a las ${appointmentTime}`,
+        data: { appointmentId },
+        sound: true,
+      },
+      trigger: {
+        date: notificationDate,
+      },
+    });
+
+    return notificationId;
+  } catch (error) {
+    console.error("Error al programar notificación:", error);
+    return null;
+  }
+}
+
+// Cancelar una notificación programada
+export async function cancelNotification(
+  notificationId: string
+): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(notificationId);
+  } catch (error) {
+    console.error("Error al cancelar notificación:", error);
+  }
+}
+
+// Cancelar todas las notificaciones de una cita
+export async function cancelAppointmentNotifications(
+  notificationId?: string
+): Promise<void> {
+  if (notificationId) {
+    await cancelNotification(notificationId);
+  }
+}
+
+// Obtener todas las notificaciones programadas (útil para debug)
+export async function getAllScheduledNotifications() {
+  return await Notifications.getAllScheduledNotificationsAsync();
+}
+
+// Programar notificaciones para ejercicios (se repiten diariamente)
+export async function scheduleExerciseNotifications(
+  exerciseId: string,
+  scheduledTimes: string[], // Array de horarios en formato HH:mm
+  dogName: string,
+  exerciseType: string,
+  notificationTime: NotificationTime
+): Promise<string[]> {
+  const minutes = getMinutesFromNotificationTime(notificationTime);
+
+  if (minutes === null || scheduledTimes.length === 0) {
+    return [];
+  }
+
+  const notificationIds: string[] = [];
+
+  for (const scheduledTime of scheduledTimes) {
+    try {
+      const [hours, mins] = scheduledTime.split(":").map(Number);
+      
+      // Calcular el momento de la notificación
+      const now = new Date();
+      const exerciseDateTime = new Date();
+      exerciseDateTime.setHours(hours, mins, 0, 0);
+      
+      const notificationDate = new Date(
+        exerciseDateTime.getTime() - minutes * 60 * 1000
+      );
+
+      // Si la hora ya pasó hoy, programar para mañana
+      if (notificationDate <= now) {
+        notificationDate.setDate(notificationDate.getDate() + 1);
+      }
+
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `🐾 Hora de ejercicio: ${dogName}`,
+          body: `${exerciseType} programado a las ${scheduledTime}`,
+          data: { exerciseId, scheduledTime },
+          sound: true,
+        },
+        trigger: {
+          hour: notificationDate.getHours(),
+          minute: notificationDate.getMinutes(),
+          repeats: true, // Repetir diariamente
+        },
+      });
+
+      notificationIds.push(notificationId);
+    } catch (error) {
+      console.error(
+        `Error al programar notificación para ${scheduledTime}:`,
+        error
+      );
+    }
+  }
+
+  return notificationIds;
+}
+
+// Cancelar todas las notificaciones de un ejercicio
+export async function cancelExerciseNotifications(
+  notificationIds: string[]
+): Promise<void> {
+  for (const notificationId of notificationIds) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+    } catch (error) {
+      console.error("Error al cancelar notificación de ejercicio:", error);
+    }
+  }
+}

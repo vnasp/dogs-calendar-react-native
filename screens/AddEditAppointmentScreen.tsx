@@ -67,7 +67,7 @@ export default function AddEditAppointmentScreen({
     "otro",
   ];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedDogId) {
       Alert.alert("Error", "Por favor selecciona un perro");
       return;
@@ -90,9 +90,9 @@ export default function AddEditAppointmentScreen({
     };
 
     if (isEditing && appointmentId) {
-      updateAppointment(appointmentId, appointmentData);
+      await updateAppointment(appointmentId, appointmentData);
     } else {
-      addAppointment(appointmentData);
+      await addAppointment(appointmentData);
     }
 
     onNavigateBack();
