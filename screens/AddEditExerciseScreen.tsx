@@ -21,8 +21,6 @@ import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
 import PrimaryButton from "../components/PrimaryButton";
-  NotificationTime,
-} from "../components/NotificationSelector";
 
 interface AddEditExerciseScreenProps {
   exerciseId?: string;

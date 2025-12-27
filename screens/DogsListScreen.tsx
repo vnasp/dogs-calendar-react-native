@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDogs } from "../context/DogsContext";
+import HeaderAddButton from "../components/HeaderAddButton";
 
 interface DogsListScreenProps {
   onNavigateToAddEdit: (dogId?: string) => void;

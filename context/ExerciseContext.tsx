@@ -117,7 +117,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
     try {
       const stored = await AsyncStorage.getItem(EXERCISES_STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed: Exercise[] = JSON.parse(stored);
         setExercises(parsed);
 
         // Reprogramar notificaciones para ejercicios activos
