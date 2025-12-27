@@ -158,12 +158,12 @@ export async function scheduleExerciseNotifications(
   for (const scheduledTime of scheduledTimes) {
     try {
       const [hours, mins] = scheduledTime.split(":").map(Number);
-      
+
       // Calcular el momento de la notificación
       const now = new Date();
       const exerciseDateTime = new Date();
       exerciseDateTime.setHours(hours, mins, 0, 0);
-      
+
       const notificationDate = new Date(
         exerciseDateTime.getTime() - minutes * 60 * 1000
       );

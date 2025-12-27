@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
   scheduleExerciseNotifications,
@@ -97,7 +103,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
 
   const addExercise = async (exercise: Omit<Exercise, "id">) => {
     const exerciseId = Date.now().toString();
-    
+
     // Programar notificaciones para cada horario
     const notificationIds = await scheduleExerciseNotifications(
       exerciseId,
@@ -120,7 +126,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
     updatedExercise: Omit<Exercise, "id">
   ) => {
     const existingExercise = exercises.find((ex) => ex.id === id);
-    
+
     // Cancelar notificaciones anteriores
     if (existingExercise) {
       await cancelExerciseNotifications(existingExercise.notificationIds);
@@ -146,12 +152,12 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
 
   const deleteExercise = async (id: string) => {
     const exercise = exercises.find((ex) => ex.id === id);
-    
+
     // Cancelar notificaciones
     if (exercise) {
       await cancelExerciseNotifications(exercise.notificationIds);
     }
-    
+
     setExercises(exercises.filter((exercise) => exercise.id !== id));
   };
 

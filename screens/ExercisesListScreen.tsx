@@ -141,7 +141,12 @@ export default function ExercisesListScreen({
                             {exercise.notificationTime &&
                               exercise.notificationTime !== "none" && (
                                 <Text className="text-purple-600 text-sm">
-                                  🔔 {notificationLabels[exercise.notificationTime]}
+                                  🔔{" "}
+                                  {
+                                    notificationLabels[
+                                      exercise.notificationTime
+                                    ]
+                                  }
                                 </Text>
                               )}
                             {exercise.notes && (
