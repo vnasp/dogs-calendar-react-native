@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import LoadingScreen from "./screens/LoadingScreen";
+import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
 import DogsListScreen from "./screens/DogsListScreen";
 import AddEditDogScreen from "./screens/AddEditDogScreen";
@@ -13,6 +14,7 @@ import MedicationsListScreen from "./screens/MedicationsListScreen";
 import AddEditMedicationScreen from "./screens/AddEditMedicationScreen";
 import MedicalHistoryScreen from "./screens/MedicalHistoryScreen";
 import Footer from "./components/Footer";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DogsProvider } from "./context/DogsContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ExerciseProvider } from "./context/ExerciseContext";
@@ -21,6 +23,7 @@ import "./global.css";
 
 type Screen =
   | "loading"
+  | "login"
   | "home"
   | "dogsList"
   | "addEditDog"
@@ -32,7 +35,7 @@ type Screen =
   | "addEditMedication"
   | "medicalHistory";
 
-export default function App() {
+function MainApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("loading");
   const [editingDogId, setEditingDogId] = useState<string | undefined>();
   const [editingAppointmentId, setEditingAppointmentId] = useState<
@@ -45,15 +48,17 @@ export default function App() {
     string | undefined
   >();
   const [selectedDogId, setSelectedDogId] = useState<string | undefined>();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    // Simula el tiempo de carga
-    const timer = setTimeout(() => {
-      setCurrentScreen("home");
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
+    if (!authLoading) {
+      if (user) {
+        setCurrentScreen("home");
+      } else {
+        setCurrentScreen("login");
+      }
+    }
+  }, [user, authLoading]);
 
   const navigateToHome = () => setCurrentScreen("home");
   const navigateToDogsList = () => setCurrentScreen("dogsList");
@@ -84,9 +89,15 @@ export default function App() {
   };
 
   const renderScreen = () => {
+    if (authLoading || currentScreen === "loading") {
+      return <LoadingScreen />;
+    }
+
+    if (!user) {
+      return <LoginScreen />;
+    }
+
     switch (currentScreen) {
-      case "loading":
-        return <LoadingScreen />;
       case "home":
         return (
           <HomeScreen
@@ -179,19 +190,29 @@ export default function App() {
           <ExerciseProvider>
             <MedicationProvider>
               {renderScreen()}
-              <Footer
-                currentScreen={currentScreen}
-                onNavigateToHome={navigateToHome}
-                onNavigateToDogsList={navigateToDogsList}
-                onNavigateToCalendar={navigateToCalendar}
-                onNavigateToMedications={navigateToMedications}
-                onNavigateToExercises={navigateToExercises}
-              />
+              {user && (
+                <Footer
+                  currentScreen={currentScreen}
+                  onNavigateToHome={navigateToHome}
+                  onNavigateToDogsList={navigateToDogsList}
+                  onNavigateToCalendar={navigateToCalendar}
+                  onNavigateToMedications={navigateToMedications}
+                  onNavigateToExercises={navigateToExercises}
+                />
+              )}
               <StatusBar style="light" />
             </MedicationProvider>
           </ExerciseProvider>
         </CalendarProvider>
       </DogsProvider>
     </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainApp />
+    </AuthProvider>
   );
 }

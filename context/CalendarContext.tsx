@@ -5,15 +5,14 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../utils/supabase";
+import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
   scheduleAppointmentNotification,
   cancelAppointmentNotifications,
   requestNotificationPermissions,
 } from "../utils/notificationService";
-
-const APPOINTMENTS_STORAGE_KEY = "@appointments_data";
 
 export type AppointmentType =
   | "control"
@@ -39,9 +38,13 @@ export interface Appointment {
 
 interface CalendarContextType {
   appointments: Appointment[];
-  addAppointment: (appointment: Omit<Appointment, "id">) => void;
-  updateAppointment: (id: string, appointment: Omit<Appointment, "id">) => void;
-  deleteAppointment: (id: string) => void;
+  loading: boolean;
+  addAppointment: (appointment: Omit<Appointment, "id">) => Promise<void>;
+  updateAppointment: (
+    id: string,
+    appointment: Omit<Appointment, "id">
+  ) => Promise<void>;
+  deleteAppointment: (id: string) => Promise<void>;
   getAppointmentById: (id: string) => Appointment | undefined;
   getAppointmentsByDogId: (dogId: string) => Appointment[];
   getUpcomingAppointments: () => Appointment[];
@@ -53,135 +56,201 @@ const CalendarContext = createContext<CalendarContextType | undefined>(
 
 export function CalendarProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // Solicitar permisos y cargar datos al iniciar
   useEffect(() => {
     requestNotificationPermissions();
-    loadAppointments();
-  }, []);
-
-  // Guardar datos cuando cambian
-  useEffect(() => {
-    if (isLoaded) {
-      saveAppointments();
+    if (user) {
+      loadAppointments();
+    } else {
+      setAppointments([]);
+      setLoading(false);
     }
-  }, [appointments, isLoaded]);
+  }, [user]);
 
   const loadAppointments = async () => {
     try {
-      const stored = await AsyncStorage.getItem(APPOINTMENTS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Convertir fechas de string a Date
-        const appointmentsWithDates = parsed.map((apt: any) => ({
-          ...apt,
-          date: new Date(apt.date),
-        }));
-        setAppointments(appointmentsWithDates);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("*, dogs(name)")
+        .order("date", { ascending: true });
 
-        // Reprogramar notificaciones para citas futuras
-        for (const apt of appointmentsWithDates) {
+      if (error) throw error;
+
+      const appointmentsWithDates = await Promise.all(
+        (data || []).map(async (apt: any) => {
+          const appointment: Appointment = {
+            id: apt.id,
+            dogId: apt.dog_id,
+            dogName: apt.dogs?.name || "",
+            date: new Date(apt.date),
+            time: apt.time,
+            type: apt.type as AppointmentType,
+            notes: apt.notes,
+            notificationTime: apt.notification_time as NotificationTime,
+          };
+
+          // Reprogramar notificaciones para citas futuras
           const appointmentDate = new Date(apt.date);
           if (appointmentDate > new Date()) {
             const notificationId = await scheduleAppointmentNotification(
               apt.id,
-              apt.date,
-              apt.time,
-              apt.dogName,
-              appointmentTypeLabels[apt.type],
-              apt.notificationTime
+              appointment.date,
+              appointment.time,
+              appointment.dogName,
+              appointmentTypeLabels[appointment.type],
+              appointment.notificationTime
             );
-            if (notificationId && notificationId !== apt.notificationId) {
-              apt.notificationId = notificationId;
+            if (notificationId) {
+              appointment.notificationId = notificationId;
             }
           }
-        }
-      }
+
+          return appointment;
+        })
+      );
+
+      setAppointments(appointmentsWithDates);
     } catch (error) {
       console.error("Error loading appointments:", error);
     } finally {
-      setIsLoaded(true);
-    }
-  };
-
-  const saveAppointments = async () => {
-    try {
-      await AsyncStorage.setItem(
-        APPOINTMENTS_STORAGE_KEY,
-        JSON.stringify(appointments)
-      );
-    } catch (error) {
-      console.error("Error saving appointments:", error);
+      setLoading(false);
     }
   };
 
   const addAppointment = async (appointment: Omit<Appointment, "id">) => {
-    const newAppointment: Appointment = {
-      ...appointment,
-      id: Date.now().toString(),
-    };
+    try {
+      if (!user) throw new Error("No user authenticated");
 
-    // Programar notificación
-    const notificationId = await scheduleAppointmentNotification(
-      newAppointment.id,
-      newAppointment.date,
-      newAppointment.time,
-      newAppointment.dogName,
-      appointmentTypeLabels[newAppointment.type],
-      newAppointment.notificationTime
-    );
+      const { data, error } = await supabase
+        .from("appointments")
+        .insert({
+          user_id: user.id,
+          dog_id: appointment.dogId,
+          type: appointment.type,
+          title: appointmentTypeLabels[appointment.type],
+          date: appointment.date.toISOString().split("T")[0],
+          time: appointment.time,
+          notes: appointment.notes,
+          notification_time: appointment.notificationTime,
+        })
+        .select()
+        .single();
 
-    if (notificationId) {
-      newAppointment.notificationId = notificationId;
+      if (error) throw error;
+
+      const newAppointment: Appointment = {
+        id: data.id,
+        dogId: data.dog_id,
+        dogName: appointment.dogName,
+        date: new Date(data.date),
+        time: data.time,
+        type: data.type as AppointmentType,
+        notes: data.notes,
+        notificationTime: data.notification_time as NotificationTime,
+      };
+
+      // Programar notificación
+      const notificationId = await scheduleAppointmentNotification(
+        newAppointment.id,
+        newAppointment.date,
+        newAppointment.time,
+        newAppointment.dogName,
+        appointmentTypeLabels[newAppointment.type],
+        newAppointment.notificationTime
+      );
+
+      if (notificationId) {
+        newAppointment.notificationId = notificationId;
+      }
+
+      setAppointments([...appointments, newAppointment]);
+    } catch (error) {
+      console.error("Error adding appointment:", error);
+      throw error;
     }
-
-    setAppointments([...appointments, newAppointment]);
   };
 
   const updateAppointment = async (
     id: string,
     updatedAppointment: Omit<Appointment, "id">
   ) => {
-    // Cancelar notificación anterior
-    const existingAppointment = appointments.find((apt) => apt.id === id);
-    if (existingAppointment?.notificationId) {
-      await cancelAppointmentNotifications(existingAppointment.notificationId);
+    try {
+      // Cancelar notificación anterior
+      const existingAppointment = appointments.find((apt) => apt.id === id);
+      if (existingAppointment?.notificationId) {
+        await cancelAppointmentNotifications(
+          existingAppointment.notificationId
+        );
+      }
+
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          dog_id: updatedAppointment.dogId,
+          type: updatedAppointment.type,
+          title: appointmentTypeLabels[updatedAppointment.type],
+          date: updatedAppointment.date.toISOString().split("T")[0],
+          time: updatedAppointment.time,
+          notes: updatedAppointment.notes,
+          notification_time: updatedAppointment.notificationTime,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Programar nueva notificación
+      const notificationId = await scheduleAppointmentNotification(
+        id,
+        updatedAppointment.date,
+        updatedAppointment.time,
+        updatedAppointment.dogName,
+        appointmentTypeLabels[updatedAppointment.type],
+        updatedAppointment.notificationTime
+      );
+
+      const finalAppointment = {
+        ...updatedAppointment,
+        id,
+        notificationId: notificationId || undefined,
+      };
+
+      setAppointments(
+        appointments.map((appointment) =>
+          appointment.id === id ? finalAppointment : appointment
+        )
+      );
+    } catch (error) {
+      console.error("Error updating appointment:", error);
+      throw error;
     }
-
-    // Programar nueva notificación
-    const notificationId = await scheduleAppointmentNotification(
-      id,
-      updatedAppointment.date,
-      updatedAppointment.time,
-      updatedAppointment.dogName,
-      appointmentTypeLabels[updatedAppointment.type],
-      updatedAppointment.notificationTime
-    );
-
-    const finalAppointment = {
-      ...updatedAppointment,
-      id,
-      notificationId: notificationId || undefined,
-    };
-
-    setAppointments(
-      appointments.map((appointment) =>
-        appointment.id === id ? finalAppointment : appointment
-      )
-    );
   };
 
   const deleteAppointment = async (id: string) => {
-    // Cancelar notificación
-    const appointment = appointments.find((apt) => apt.id === id);
-    if (appointment?.notificationId) {
-      await cancelAppointmentNotifications(appointment.notificationId);
-    }
+    try {
+      // Cancelar notificación
+      const appointment = appointments.find((apt) => apt.id === id);
+      if (appointment?.notificationId) {
+        await cancelAppointmentNotifications(appointment.notificationId);
+      }
 
-    setAppointments(
-      appointments.filter((appointment) => appointment.id !== id)
-    );
+      const { error } = await supabase
+        .from("appointments")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setAppointments(
+        appointments.filter((appointment) => appointment.id !== id)
+      );
+    } catch (error) {
+      console.error("Error deleting appointment:", error);
+      throw error;
+    }
   };
 
   const getAppointmentById = (id: string) => {
@@ -204,6 +273,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     <CalendarContext.Provider
       value={{
         appointments,
+        loading,
         addAppointment,
         updateAppointment,
         deleteAppointment,

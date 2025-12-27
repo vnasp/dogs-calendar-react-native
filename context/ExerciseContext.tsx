@@ -5,15 +5,14 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../utils/supabase";
+import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
   scheduleExerciseNotifications,
   cancelExerciseNotifications,
   requestNotificationPermissions,
 } from "../utils/notificationService";
-
-const EXERCISES_STORAGE_KEY = "@exercises_data";
 
 export type ExerciseType =
   | "caminata"
@@ -42,12 +41,13 @@ export interface Exercise {
 
 interface ExerciseContextType {
   exercises: Exercise[];
-  addExercise: (exercise: Omit<Exercise, "id">) => void;
-  updateExercise: (id: string, exercise: Omit<Exercise, "id">) => void;
-  deleteExercise: (id: string) => void;
+  loading: boolean;
+  addExercise: (exercise: Omit<Exercise, "id">) => Promise<void>;
+  updateExercise: (id: string, exercise: Omit<Exercise, "id">) => Promise<void>;
+  deleteExercise: (id: string) => Promise<void>;
   getExerciseById: (id: string) => Exercise | undefined;
   getExercisesByDogId: (dogId: string) => Exercise[];
-  toggleExerciseActive: (id: string) => void;
+  toggleExerciseActive: (id: string) => Promise<void>;
 }
 
 const ExerciseContext = createContext<ExerciseContextType | undefined>(
@@ -98,120 +98,216 @@ export function calculateScheduledTimes(
 
 export function ExerciseProvider({ children }: { children: ReactNode }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // Solicitar permisos y cargar datos al iniciar
   useEffect(() => {
     requestNotificationPermissions();
-    loadExercises();
-  }, []);
-
-  // Guardar datos cuando cambian
-  useEffect(() => {
-    if (isLoaded) {
-      saveExercises();
+    if (user) {
+      loadExercises();
+    } else {
+      setExercises([]);
+      setLoading(false);
     }
-  }, [exercises, isLoaded]);
+  }, [user]);
 
   const loadExercises = async () => {
     try {
-      const stored = await AsyncStorage.getItem(EXERCISES_STORAGE_KEY);
-      if (stored) {
-        const parsed: Exercise[] = JSON.parse(stored);
-        setExercises(parsed);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("exercises")
+        .select("*, dogs(name)")
+        .order("created_at", { ascending: true });
 
-        // Reprogramar notificaciones para ejercicios activos
-        for (const ex of parsed) {
-          if (ex.isActive) {
+      if (error) throw error;
+
+      const exercisesWithData = await Promise.all(
+        (data || []).map(async (ex: any) => {
+          const exercise: Exercise = {
+            id: ex.id,
+            dogId: ex.dog_id,
+            dogName: ex.dogs?.name || "",
+            type: ex.type as ExerciseType,
+            durationMinutes: ex.duration_minutes,
+            timesPerDay: ex.times_per_day,
+            startTime: ex.start_time,
+            endTime: ex.end_time,
+            scheduledTimes: ex.scheduled_times || [],
+            notes: ex.notes,
+            isActive: ex.is_active,
+            notificationTime: ex.notification_time as NotificationTime,
+            notificationIds: ex.notification_ids || [],
+          };
+
+          // Reprogramar notificaciones para ejercicios activos
+          if (exercise.isActive) {
             const notificationIds = await scheduleExerciseNotifications(
-              ex.id,
-              ex.scheduledTimes,
-              ex.dogName,
-              exerciseTypeLabels[ex.type],
-              ex.notificationTime
+              exercise.id,
+              exercise.scheduledTimes,
+              exercise.dogName,
+              exerciseTypeLabels[exercise.type],
+              exercise.notificationTime
             );
             if (notificationIds.length > 0) {
-              ex.notificationIds = notificationIds;
+              exercise.notificationIds = notificationIds;
             }
           }
-        }
-      }
+
+          return exercise;
+        })
+      );
+
+      setExercises(exercisesWithData);
     } catch (error) {
       console.error("Error loading exercises:", error);
     } finally {
-      setIsLoaded(true);
-    }
-  };
-
-  const saveExercises = async () => {
-    try {
-      await AsyncStorage.setItem(
-        EXERCISES_STORAGE_KEY,
-        JSON.stringify(exercises)
-      );
-    } catch (error) {
-      console.error("Error saving exercises:", error);
+      setLoading(false);
     }
   };
 
   const addExercise = async (exercise: Omit<Exercise, "id">) => {
-    const exerciseId = Date.now().toString();
+    try {
+      if (!user) throw new Error("No user authenticated");
 
-    // Programar notificaciones para cada horario
-    const notificationIds = await scheduleExerciseNotifications(
-      exerciseId,
-      exercise.scheduledTimes,
-      exercise.dogName,
-      exerciseTypeLabels[exercise.type],
-      exercise.notificationTime
-    );
+      const { data, error } = await supabase
+        .from("exercises")
+        .insert({
+          user_id: user.id,
+          dog_id: exercise.dogId,
+          type: exercise.type,
+          duration_minutes: exercise.durationMinutes,
+          times_per_day: exercise.timesPerDay,
+          start_time: exercise.startTime,
+          end_time: exercise.endTime,
+          scheduled_times: exercise.scheduledTimes,
+          notes: exercise.notes,
+          is_active: exercise.isActive,
+          notification_time: exercise.notificationTime,
+        })
+        .select()
+        .single();
 
-    const newExercise: Exercise = {
-      ...exercise,
-      id: exerciseId,
-      notificationIds,
-    };
-    setExercises([...exercises, newExercise]);
+      if (error) throw error;
+
+      const newExercise: Exercise = {
+        id: data.id,
+        dogId: data.dog_id,
+        dogName: exercise.dogName,
+        type: data.type as ExerciseType,
+        durationMinutes: data.duration_minutes,
+        timesPerDay: data.times_per_day,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        scheduledTimes: data.scheduled_times || [],
+        notes: data.notes,
+        isActive: data.is_active,
+        notificationTime: data.notification_time as NotificationTime,
+        notificationIds: [],
+      };
+
+      // Programar notificaciones para cada horario
+      const notificationIds = await scheduleExerciseNotifications(
+        newExercise.id,
+        newExercise.scheduledTimes,
+        newExercise.dogName,
+        exerciseTypeLabels[newExercise.type],
+        newExercise.notificationTime
+      );
+
+      if (notificationIds.length > 0) {
+        newExercise.notificationIds = notificationIds;
+        // Actualizar notification_ids en la base de datos
+        await supabase
+          .from("exercises")
+          .update({ notification_ids: notificationIds })
+          .eq("id", newExercise.id);
+      }
+
+      setExercises([...exercises, newExercise]);
+    } catch (error) {
+      console.error("Error adding exercise:", error);
+      throw error;
+    }
   };
 
   const updateExercise = async (
     id: string,
     updatedExercise: Omit<Exercise, "id">
   ) => {
-    const existingExercise = exercises.find((ex) => ex.id === id);
+    try {
+      // Cancelar notificaciones anteriores
+      const existingExercise = exercises.find((ex) => ex.id === id);
+      if (existingExercise) {
+        await cancelExerciseNotifications(existingExercise.notificationIds);
+      }
 
-    // Cancelar notificaciones anteriores
-    if (existingExercise) {
-      await cancelExerciseNotifications(existingExercise.notificationIds);
+      const { error } = await supabase
+        .from("exercises")
+        .update({
+          dog_id: updatedExercise.dogId,
+          type: updatedExercise.type,
+          duration_minutes: updatedExercise.durationMinutes,
+          times_per_day: updatedExercise.timesPerDay,
+          start_time: updatedExercise.startTime,
+          end_time: updatedExercise.endTime,
+          scheduled_times: updatedExercise.scheduledTimes,
+          notes: updatedExercise.notes,
+          is_active: updatedExercise.isActive,
+          notification_time: updatedExercise.notificationTime,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Programar nuevas notificaciones
+      const notificationIds = await scheduleExerciseNotifications(
+        id,
+        updatedExercise.scheduledTimes,
+        updatedExercise.dogName,
+        exerciseTypeLabels[updatedExercise.type],
+        updatedExercise.notificationTime
+      );
+
+      if (notificationIds.length > 0) {
+        // Actualizar notification_ids en la base de datos
+        await supabase
+          .from("exercises")
+          .update({ notification_ids: notificationIds })
+          .eq("id", id);
+      }
+
+      setExercises(
+        exercises.map((exercise) =>
+          exercise.id === id
+            ? { ...updatedExercise, id, notificationIds }
+            : exercise
+        )
+      );
+    } catch (error) {
+      console.error("Error updating exercise:", error);
+      throw error;
     }
-
-    // Programar nuevas notificaciones
-    const notificationIds = await scheduleExerciseNotifications(
-      id,
-      updatedExercise.scheduledTimes,
-      updatedExercise.dogName,
-      exerciseTypeLabels[updatedExercise.type],
-      updatedExercise.notificationTime
-    );
-
-    setExercises(
-      exercises.map((exercise) =>
-        exercise.id === id
-          ? { ...updatedExercise, id, notificationIds }
-          : exercise
-      )
-    );
   };
 
   const deleteExercise = async (id: string) => {
-    const exercise = exercises.find((ex) => ex.id === id);
+    try {
+      const exercise = exercises.find((ex) => ex.id === id);
 
-    // Cancelar notificaciones
-    if (exercise) {
-      await cancelExerciseNotifications(exercise.notificationIds);
+      // Cancelar notificaciones
+      if (exercise) {
+        await cancelExerciseNotifications(exercise.notificationIds);
+      }
+
+      const { error } = await supabase.from("exercises").delete().eq("id", id);
+
+      if (error) throw error;
+
+      setExercises(exercises.filter((exercise) => exercise.id !== id));
+    } catch (error) {
+      console.error("Error deleting exercise:", error);
+      throw error;
     }
-
-    setExercises(exercises.filter((exercise) => exercise.id !== id));
   };
 
   const getExerciseById = (id: string) => {
@@ -222,20 +318,36 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
     return exercises.filter((exercise) => exercise.dogId === dogId);
   };
 
-  const toggleExerciseActive = (id: string) => {
-    setExercises(
-      exercises.map((exercise) =>
-        exercise.id === id
-          ? { ...exercise, isActive: !exercise.isActive }
-          : exercise
-      )
-    );
+  const toggleExerciseActive = async (id: string) => {
+    try {
+      const exercise = exercises.find((ex) => ex.id === id);
+      if (!exercise) return;
+
+      const newActiveState = !exercise.isActive;
+
+      const { error } = await supabase
+        .from("exercises")
+        .update({ is_active: newActiveState })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setExercises(
+        exercises.map((ex) =>
+          ex.id === id ? { ...ex, isActive: newActiveState } : ex
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling exercise active:", error);
+      throw error;
+    }
   };
 
   return (
     <ExerciseContext.Provider
       value={{
         exercises,
+        loading,
         addExercise,
         updateExercise,
         deleteExercise,

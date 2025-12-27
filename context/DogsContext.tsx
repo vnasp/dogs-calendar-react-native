@@ -5,9 +5,8 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const DOGS_STORAGE_KEY = "@dogs_data";
+import { supabase } from "../utils/supabase";
+import { useAuth } from "./AuthContext";
 
 export interface Dog {
   id: string;
@@ -21,9 +20,10 @@ export interface Dog {
 
 interface DogsContextType {
   dogs: Dog[];
-  addDog: (dog: Omit<Dog, "id">) => void;
-  updateDog: (id: string, dog: Omit<Dog, "id">) => void;
-  deleteDog: (id: string) => void;
+  loading: boolean;
+  addDog: (dog: Omit<Dog, "id">) => Promise<void>;
+  updateDog: (id: string, dog: Omit<Dog, "id">) => Promise<void>;
+  deleteDog: (id: string) => Promise<void>;
   getDogById: (id: string) => Dog | undefined;
 }
 
@@ -31,61 +31,118 @@ const DogsContext = createContext<DogsContextType | undefined>(undefined);
 
 export function DogsProvider({ children }: { children: ReactNode }) {
   const [dogs, setDogs] = useState<Dog[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Cargar datos al iniciar
+  // Cargar perros cuando el usuario está autenticado
   useEffect(() => {
-    loadDogs();
-  }, []);
-
-  // Guardar datos cuando cambian (pero solo después de cargar)
-  useEffect(() => {
-    if (isLoaded) {
-      saveDogs();
+    if (user) {
+      loadDogs();
+    } else {
+      setDogs([]);
+      setLoading(false);
     }
-  }, [dogs, isLoaded]);
+  }, [user]);
 
   const loadDogs = async () => {
     try {
-      const stored = await AsyncStorage.getItem(DOGS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        // Convertir fechas de string a Date
-        const dogsWithDates = parsed.map((dog: any) => ({
-          ...dog,
-          birthDate: new Date(dog.birthDate),
-        }));
-        setDogs(dogsWithDates);
-      }
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("dogs")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const dogsWithDates = (data || []).map((dog: any) => ({
+        id: dog.id,
+        name: dog.name,
+        photo: dog.photo_uri,
+        breed: dog.breed || "",
+        birthDate: dog.birth_date ? new Date(dog.birth_date) : new Date(),
+        gender: dog.gender || "male",
+        isNeutered: dog.neutered || false,
+      }));
+
+      setDogs(dogsWithDates);
     } catch (error) {
       console.error("Error loading dogs:", error);
     } finally {
-      setIsLoaded(true);
+      setLoading(false);
     }
   };
 
-  const saveDogs = async () => {
+  const addDog = async (dog: Omit<Dog, "id">) => {
     try {
-      await AsyncStorage.setItem(DOGS_STORAGE_KEY, JSON.stringify(dogs));
+      if (!user) throw new Error("No user authenticated");
+
+      const { data, error } = await supabase
+        .from("dogs")
+        .insert({
+          user_id: user.id,
+          name: dog.name,
+          breed: dog.breed,
+          birth_date: dog.birthDate.toISOString(),
+          gender: dog.gender,
+          neutered: dog.isNeutered,
+          photo_uri: dog.photo,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newDog: Dog = {
+        id: data.id,
+        name: data.name,
+        photo: data.photo_uri,
+        breed: data.breed || "",
+        birthDate: new Date(data.birth_date),
+        gender: data.gender,
+        isNeutered: data.neutered,
+      };
+
+      setDogs([...dogs, newDog]);
     } catch (error) {
-      console.error("Error saving dogs:", error);
+      console.error("Error adding dog:", error);
+      throw error;
     }
   };
 
-  const addDog = (dog: Omit<Dog, "id">) => {
-    const newDog: Dog = {
-      ...dog,
-      id: Date.now().toString(),
-    };
-    setDogs([...dogs, newDog]);
+  const updateDog = async (id: string, updatedDog: Omit<Dog, "id">) => {
+    try {
+      const { error } = await supabase
+        .from("dogs")
+        .update({
+          name: updatedDog.name,
+          breed: updatedDog.breed,
+          birth_date: updatedDog.birthDate.toISOString(),
+          gender: updatedDog.gender,
+          neutered: updatedDog.isNeutered,
+          photo_uri: updatedDog.photo,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setDogs(dogs.map((dog) => (dog.id === id ? { ...updatedDog, id } : dog)));
+    } catch (error) {
+      console.error("Error updating dog:", error);
+      throw error;
+    }
   };
 
-  const updateDog = (id: string, updatedDog: Omit<Dog, "id">) => {
-    setDogs(dogs.map((dog) => (dog.id === id ? { ...updatedDog, id } : dog)));
-  };
+  const deleteDog = async (id: string) => {
+    try {
+      const { error } = await supabase.from("dogs").delete().eq("id", id);
 
-  const deleteDog = (id: string) => {
-    setDogs(dogs.filter((dog) => dog.id !== id));
+      if (error) throw error;
+
+      setDogs(dogs.filter((dog) => dog.id !== id));
+    } catch (error) {
+      console.error("Error deleting dog:", error);
+      throw error;
+    }
   };
 
   const getDogById = (id: string) => {
@@ -94,7 +151,7 @@ export function DogsProvider({ children }: { children: ReactNode }) {
 
   return (
     <DogsContext.Provider
-      value={{ dogs, addDog, updateDog, deleteDog, getDogById }}
+      value={{ dogs, loading, addDog, updateDog, deleteDog, getDogById }}
     >
       {children}
     </DogsContext.Provider>
