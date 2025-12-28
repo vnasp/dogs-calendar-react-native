@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TextInput,
   Alert,
   Platform,
+  PanResponder,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -71,6 +73,20 @@ export default function AddEditExerciseScreen({
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
     existingExercise?.notificationTime || "15min"
   );
+
+  // Gesto de deslizar para regresar
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return gestureState.dx > 10 && Math.abs(gestureState.dy) < 80;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 50) {
+          onNavigateBack();
+        }
+      },
+    })
+  ).current;
 
   // Calcular horarios automáticamente cuando cambian los parámetros
   const [scheduledTimes, setScheduledTimes] = useState<string[]>([]);
@@ -165,12 +181,22 @@ export default function AddEditExerciseScreen({
   const commonFrequencies = [1, 2, 3, 4, 5, 6];
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
+    <SafeAreaView className="flex-1 bg-cyan-600" {...panResponder.panHandlers}>      <StatusBar barStyle="light-content" backgroundColor="#0891b2" />      {/* Header */}
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
-          <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <ChevronLeft size={28} color="white" strokeWidth={2.5} />
+          <TouchableOpacity
+            onPress={onNavigateBack}
+            className="mr-3 p-2 -ml-2"
+            activeOpacity={0.7}
+          >
+            <ChevronLeft
+              size={32}
+              color="white"
+              strokeWidth={2.5}
+              pointerEvents="none"
+            />
+              pointerEvents="none"
+            />
           </TouchableOpacity>
           <Text className="text-white text-2xl font-bold flex-1">
             {isEditing ? "Editar Rutina" : "Nueva Rutina"}
@@ -178,7 +204,7 @@ export default function AddEditExerciseScreen({
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-6">
+      <ScrollView className="flex-1 bg-white rounded-t-3xl px-6 pt-6">
         {/* Seleccionar Perro */}
         <View className="mb-4">
           <Text className="text-gray-700 font-semibold mb-2">Perro *</Text>

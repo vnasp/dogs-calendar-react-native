@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TextInput,
   Alert,
   Platform,
+  PanResponder,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -18,6 +20,7 @@ import {
   appointmentTypeIcons,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
+import { ChevronLeft } from "lucide-react-native";
 import PrimaryButton from "../components/PrimaryButton";
 import NotificationSelector, {
   NotificationTime,
@@ -56,6 +59,20 @@ export default function AddEditAppointmentScreen({
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+
+  // Gesto de deslizar para regresar
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return gestureState.dx > 10 && Math.abs(gestureState.dy) < 80;
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > 50) {
+          onNavigateBack();
+        }
+      },
+    })
+  ).current;
 
   const appointmentTypes: AppointmentType[] = [
     "control",
@@ -131,12 +148,22 @@ export default function AddEditAppointmentScreen({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1 bg-cyan-600" {...panResponder.panHandlers}>
+      <StatusBar barStyle="light-content" backgroundColor="#0891b2" />
       {/* Header */}
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
-          <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <Text className="text-white text-2xl">‹</Text>
+          <TouchableOpacity
+            onPress={onNavigateBack}
+            className="mr-3 p-2 -ml-2"
+            activeOpacity={0.7}
+          >
+            <ChevronLeft
+              size={32}
+              color="white"
+              strokeWidth={2.5}
+              pointerEvents="none"
+            />
           </TouchableOpacity>
           <Text className="text-white text-2xl font-bold flex-1">
             {isEditing ? "Editar Cita" : "Nueva Cita"}
@@ -144,7 +171,7 @@ export default function AddEditAppointmentScreen({
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-6">
+      <ScrollView className="flex-1 bg-white rounded-t-3xl px-6 pt-6">
         {/* Seleccionar Perro */}
         <View className="mb-4">
           <Text className="text-gray-700 font-semibold mb-2">Perro *</Text>
