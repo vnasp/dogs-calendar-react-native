@@ -20,7 +20,7 @@ export interface Medication {
   dogId: string;
   dogName: string;
   name: string; // Nombre del medicamento
-  dosage: string; // Dosis (ej: "150 mg" o "1 comprimido")
+  dosage: string; // Dosis (ej: "1 comprimido")
   frequencyHours: number; // Cada cuántas horas (8, 12, 24, etc.)
   durationDays: number; // Duración del tratamiento en días
   startDate: Date; // Fecha de inicio

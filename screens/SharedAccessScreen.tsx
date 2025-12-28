@@ -93,7 +93,7 @@ export default function SharedAccessScreen({ navigation }: any) {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-neutral-50">
+    <SafeAreaView className="flex-1 bg-cyan-600">
       {/* Header */}
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center justify-between mb-2">
@@ -114,14 +114,14 @@ export default function SharedAccessScreen({ navigation }: any) {
         </Text>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-6">
+      <ScrollView className="flex-1 bg-white rounded-t-3xl px-4 pt-6">
         {/* Enviar invitación */}
         <View className="bg-white rounded-2xl p-4 mb-6 shadow-sm">
           <Text className="text-lg font-semibold text-neutral-800 mb-3">
             Invitar a alguien
           </Text>
           <TextInput
-            className="bg-neutral-50 rounded-xl px-4 py-3 mb-3 text-neutral-800"
+            className="bg-neutral-50 rounded-xl px-4 py-3 mb-3 text-neutral-800 border border-gray-300"
             placeholder="Email de la persona"
             value={email}
             onChangeText={setEmail}

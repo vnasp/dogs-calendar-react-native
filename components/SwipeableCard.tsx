@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
-import { Check } from "lucide-react-native";
+import { Square } from "lucide-react-native";
 
 interface SwipeableCardProps {
   children: React.ReactNode;
@@ -46,11 +46,16 @@ export default function SwipeableCard({
         {/* Botón de completar en la esquina superior derecha */}
         <TouchableOpacity
           onPress={onComplete}
-          className="absolute top-2 right-2 w-10 h-10 bg-green-500 rounded-full items-center justify-center active:bg-green-600"
+          className="absolute top-2 right-2 w-10 h-10 bg-gray-100 rounded-lg items-center justify-center active:bg-gray-200"
           activeOpacity={0.8}
           style={{ zIndex: 10 }}
         >
-          <Check size={20} color="white" strokeWidth={3} pointerEvents="none" />
+          <Square
+            size={24}
+            color="#6b7280"
+            strokeWidth={2}
+            pointerEvents="none"
+          />
         </TouchableOpacity>
       </View>
     </View>

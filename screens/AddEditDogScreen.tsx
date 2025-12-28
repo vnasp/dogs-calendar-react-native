@@ -175,7 +175,7 @@ export default function AddEditDogScreen({
             value={name}
             onChangeText={setName}
             placeholder="Ej: Max, Luna, Rocky..."
-            className="bg-white px-4 py-3 rounded-xl text-gray-900"
+            className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
             placeholderTextColor="#9CA3AF"
           />
         </View>
@@ -187,7 +187,7 @@ export default function AddEditDogScreen({
             value={breed}
             onChangeText={setBreed}
             placeholder="Ej: Labrador, Mestizo, Beagle..."
-            className="bg-white px-4 py-3 rounded-xl text-gray-900"
+            className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
             placeholderTextColor="#9CA3AF"
           />
         </View>
@@ -199,7 +199,7 @@ export default function AddEditDogScreen({
           </Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
-            className="bg-white px-4 py-3 rounded-xl"
+            className="bg-white px-4 py-3 rounded-xl border border-gray-300"
           >
             <Text className="text-gray-900">{formatDate(birthDate)}</Text>
           </TouchableOpacity>

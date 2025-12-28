@@ -72,7 +72,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="bg-white px-4 py-4 rounded-xl text-gray-700 text-base"
+                  className="bg-white px-4 py-4 rounded-xl text-gray-700 text-base border border-gray-300"
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -89,7 +89,7 @@ export default function LoginScreen() {
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="bg-white px-4 py-4 rounded-xl text-gray-700 text-base"
+                  className="bg-white px-4 py-4 rounded-xl text-gray-700 text-base border border-gray-300"
                   placeholderTextColor="#9CA3AF"
                 />
               </View>

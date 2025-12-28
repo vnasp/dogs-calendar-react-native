@@ -238,7 +238,7 @@ export default function AddEditAppointmentScreen({
           <Text className="text-gray-700 font-semibold mb-2">Fecha *</Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
-            className="bg-white px-4 py-3 rounded-xl"
+            className="bg-white px-4 py-3 rounded-xl border border-gray-300"
           >
             <Text className="text-gray-900 text-base">{formatDate(date)}</Text>
           </TouchableOpacity>
@@ -262,7 +262,7 @@ export default function AddEditAppointmentScreen({
           <Text className="text-gray-700 font-semibold mb-2">Hora *</Text>
           <TouchableOpacity
             onPress={() => setShowTimePicker(true)}
-            className="bg-white px-4 py-3 rounded-xl"
+            className="bg-white px-4 py-3 rounded-xl border border-gray-300"
           >
             <Text className="text-gray-900 text-base">{time}</Text>
           </TouchableOpacity>

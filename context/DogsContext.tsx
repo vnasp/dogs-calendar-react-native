@@ -7,6 +7,11 @@ import React, {
 } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
+import {
+  uploadDogPhoto,
+  deleteDogPhoto,
+  replaceDogPhoto,
+} from "../utils/storageService";
 
 export interface Dog {
   id: string;
@@ -76,6 +81,12 @@ export function DogsProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) throw new Error("No user authenticated");
 
+      // Subir foto a Supabase Storage si existe
+      let photoUrl = dog.photo;
+      if (dog.photo && !dog.photo.startsWith("http")) {
+        photoUrl = await uploadDogPhoto(dog.photo, user.id);
+      }
+
       const { data, error } = await supabase
         .from("dogs")
         .insert({
@@ -85,7 +96,7 @@ export function DogsProvider({ children }: { children: ReactNode }) {
           birth_date: dog.birthDate.toISOString(),
           gender: dog.gender,
           neutered: dog.isNeutered,
-          photo_uri: dog.photo,
+          photo_uri: photoUrl,
         })
         .select()
         .single();
@@ -111,6 +122,24 @@ export function DogsProvider({ children }: { children: ReactNode }) {
 
   const updateDog = async (id: string, updatedDog: Omit<Dog, "id">) => {
     try {
+      if (!user) throw new Error("No user authenticated");
+
+      const existingDog = getDogById(id);
+      let photoUrl = updatedDog.photo;
+
+      // Si la foto cambió y es una URI local, subirla
+      if (
+        updatedDog.photo &&
+        !updatedDog.photo.startsWith("http") &&
+        updatedDog.photo !== existingDog?.photo
+      ) {
+        photoUrl = await replaceDogPhoto(
+          existingDog?.photo,
+          updatedDog.photo,
+          user.id
+        );
+      }
+
       const { error } = await supabase
         .from("dogs")
         .update({
@@ -119,13 +148,17 @@ export function DogsProvider({ children }: { children: ReactNode }) {
           birth_date: updatedDog.birthDate.toISOString(),
           gender: updatedDog.gender,
           neutered: updatedDog.isNeutered,
-          photo_uri: updatedDog.photo,
+          photo_uri: photoUrl,
         })
         .eq("id", id);
 
       if (error) throw error;
 
-      setDogs(dogs.map((dog) => (dog.id === id ? { ...updatedDog, id } : dog)));
+      setDogs(
+        dogs.map((dog) =>
+          dog.id === id ? { ...updatedDog, id, photo: photoUrl } : dog
+        )
+      );
     } catch (error) {
       console.error("Error updating dog:", error);
       throw error;
@@ -134,6 +167,13 @@ export function DogsProvider({ children }: { children: ReactNode }) {
 
   const deleteDog = async (id: string) => {
     try {
+      const dog = getDogById(id);
+
+      // Eliminar foto de Storage si existe
+      if (dog?.photo && dog.photo.includes("supabase")) {
+        await deleteDogPhoto(dog.photo);
+      }
+
       const { error } = await supabase.from("dogs").delete().eq("id", id);
 
       if (error) throw error;

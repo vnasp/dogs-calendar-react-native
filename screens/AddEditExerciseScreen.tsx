@@ -362,7 +362,7 @@ export default function AddEditExerciseScreen({
                 value={startTime}
                 onChangeText={setStartTime}
                 placeholder="07:00"
-                className="bg-white px-4 py-3 rounded-xl text-gray-900"
+                className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
                 placeholderTextColor="#9CA3AF"
               />
             </View>
@@ -372,7 +372,7 @@ export default function AddEditExerciseScreen({
                 value={endTime}
                 onChangeText={setEndTime}
                 placeholder="21:00"
-                className="bg-white px-4 py-3 rounded-xl text-gray-900"
+                className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
                 placeholderTextColor="#9CA3AF"
               />
             </View>
@@ -386,7 +386,7 @@ export default function AddEditExerciseScreen({
           </Text>
           <TouchableOpacity
             onPress={() => setShowDatePicker(true)}
-            className="bg-white px-4 py-3 rounded-xl"
+            className="bg-white px-4 py-3 rounded-xl border border-gray-300"
           >
             <Text className="text-gray-900">
               {startDate.toLocaleDateString("es-ES", {
@@ -501,7 +501,7 @@ export default function AddEditExerciseScreen({
             placeholder="Ej: Evitar días de lluvia, llevarlo con correa corta..."
             multiline
             numberOfLines={4}
-            className="bg-white px-4 py-3 rounded-xl text-gray-900"
+            className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
             placeholderTextColor="#9CA3AF"
             textAlignVertical="top"
           />
