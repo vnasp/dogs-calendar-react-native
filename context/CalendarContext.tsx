@@ -4,6 +4,7 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
@@ -278,67 +279,70 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
-  const markAppointmentCompleted = async (
-    appointmentId: string,
-    scheduledTime: string
-  ) => {
-    try {
-      if (!user) throw new Error("No user authenticated");
+  const markAppointmentCompleted = useCallback(
+    async (appointmentId: string, scheduledTime: string) => {
+      try {
+        if (!user) throw new Error("No user authenticated");
 
-      const { error } = await supabase.from("completions").insert({
-        user_id: user.id,
-        item_type: "appointment",
-        item_id: appointmentId,
-        scheduled_time: scheduledTime || null,
-        completed_date: new Date().toISOString().split("T")[0],
-      });
+        const { error } = await supabase.from("completions").insert({
+          user_id: user.id,
+          item_type: "appointment",
+          item_id: appointmentId,
+          scheduled_time: scheduledTime || null,
+          completed_date: new Date().toISOString().split("T")[0],
+        });
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error marking appointment completed:", error);
-      throw error;
-    }
-  };
-
-  const getTodayCompletions = async (
-    appointmentId: string,
-    scheduledTime: string
-  ): Promise<Completion | null> => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const query = supabase
-        .from("completions")
-        .select("*")
-        .eq("item_type", "appointment")
-        .eq("item_id", appointmentId)
-        .eq("completed_date", today);
-
-      // Para appointments, scheduled_time puede ser null
-      if (scheduledTime) {
-        query.eq("scheduled_time", scheduledTime);
-      } else {
-        query.is("scheduled_time", null);
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error marking appointment completed:", error);
+        throw error;
       }
+    },
+    [user]
+  );
 
-      const { data, error } = await query.single();
+  const getTodayCompletions = useCallback(
+    async (
+      appointmentId: string,
+      scheduledTime: string
+    ): Promise<Completion | null> => {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const query = supabase
+          .from("completions")
+          .select("*")
+          .eq("item_type", "appointment")
+          .eq("item_id", appointmentId)
+          .eq("completed_date", today);
 
-      if (error && error.code !== "PGRST116") throw error;
-      if (!data) return null;
+        // Para appointments, scheduled_time puede ser null
+        if (scheduledTime) {
+          query.eq("scheduled_time", scheduledTime);
+        } else {
+          query.is("scheduled_time", null);
+        }
 
-      return {
-        id: data.id,
-        userId: data.user_id,
-        itemType: data.item_type,
-        itemId: data.item_id,
-        scheduledTime: data.scheduled_time,
-        completedDate: data.completed_date,
-        completedAt: new Date(data.completed_at),
-      };
-    } catch (error) {
-      console.error("Error getting completions:", error);
-      return null;
-    }
-  };
+        const { data, error } = await query.single();
+
+        if (error && error.code !== "PGRST116") throw error;
+        if (!data) return null;
+
+        return {
+          id: data.id,
+          userId: data.user_id,
+          itemType: data.item_type,
+          itemId: data.item_id,
+          scheduledTime: data.scheduled_time,
+          completedDate: data.completed_date,
+          completedAt: new Date(data.completed_at),
+        };
+      } catch (error) {
+        console.error("Error getting completions:", error);
+        return null;
+      }
+    },
+    []
+  );
 
   return (
     <CalendarContext.Provider
@@ -388,4 +392,15 @@ export const appointmentTypeColors: Record<AppointmentType, string> = {
   vacuna: "bg-pink-100",
   desparasitacion: "bg-yellow-100",
   otro: "bg-gray-100",
+};
+
+export const appointmentTypeIcons: Record<AppointmentType, string> = {
+  control: "🩺",
+  radiografia: "📸",
+  prequirurgico: "📋",
+  operacion: "🏥",
+  fisioterapia: "💪",
+  vacuna: "💉",
+  desparasitacion: "💊",
+  otro: "📝",
 };

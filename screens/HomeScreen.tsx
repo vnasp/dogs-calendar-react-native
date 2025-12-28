@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCalendar, appointmentTypeLabels } from "../context/CalendarContext";
@@ -10,7 +10,7 @@ import Logo from "../components/Logo";
 import {
   Calendar,
   Pill,
-  Users,
+  UserPlus,
   Share2,
   Dumbbell,
   Sparkles,
@@ -51,131 +51,185 @@ export default function HomeScreen({
     [key: string]: Completion | null;
   }>({});
 
-  const now = new Date();
-  const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
+  // Usar useMemo para calcular la fecha de hoy (solo cambia una vez al día)
+  const today = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }, []);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  // Obtener citas de hoy
-  const todayAppointments = appointments
-    .filter((apt) => {
-      const aptDate = new Date(apt.date);
-      aptDate.setHours(0, 0, 0, 0);
-      return aptDate.getTime() === today.getTime();
-    })
-    .map((apt) => ({
-      type: "appointment" as const,
-      id: apt.id,
-      dogName: apt.dogName,
-      time: apt.time,
-      data: apt,
-    }));
+  // Obtener citas de hoy con useMemo
+  const todayAppointments = useMemo(() => {
+    return appointments
+      .filter((apt) => {
+        const aptDate = new Date(apt.date);
+        aptDate.setHours(0, 0, 0, 0);
+        return aptDate.getTime() === today;
+      })
+      .map((apt) => ({
+        type: "appointment" as const,
+        id: apt.id,
+        dogName: apt.dogName,
+        time: apt.time,
+        data: apt,
+      }));
+  }, [appointments, today]);
 
   // Crear instancias individuales de medicamentos por horario (solo hoy)
-  const todayMedicationInstances = medications
-    .filter((med) => med.isActive && med.durationDays > 0)
-    .flatMap((med) =>
-      med.scheduledTimes.map((time) => ({
-        type: "medication" as const,
-        id: `${med.id}-${time}`,
-        dogName: med.dogName,
-        time: time,
-        data: {
-          ...med,
+  const todayMedicationInstances = useMemo(() => {
+    return medications
+      .filter((med) => med.isActive && med.durationDays > 0)
+      .flatMap((med) =>
+        med.scheduledTimes.map((time) => ({
+          type: "medication" as const,
+          id: `${med.id}-${time}`,
+          dogName: med.dogName,
+          time: time,
+          medicationId: med.id,
           currentScheduledTime: time,
-        },
-      }))
-    );
+          data: med, // Referencia directa sin spread
+        }))
+      );
+  }, [medications]);
 
   // Crear instancias individuales de ejercicios por horario (solo hoy)
-  const todayExerciseInstances = exercises
-    .filter((ex) => ex.isActive)
-    .flatMap((ex) =>
-      ex.scheduledTimes.map((time) => ({
-        type: "exercise" as const,
-        id: `${ex.id}-${time}`,
-        dogName: ex.dogName,
-        time: time,
-        data: {
-          ...ex,
+  const todayExerciseInstances = useMemo(() => {
+    return exercises
+      .filter((ex) => ex.isActive)
+      .flatMap((ex) =>
+        ex.scheduledTimes.map((time) => ({
+          type: "exercise" as const,
+          id: `${ex.id}-${time}`,
+          dogName: ex.dogName,
+          time: time,
+          exerciseId: ex.id,
           currentScheduledTime: time,
-        },
-      }))
-    );
+          data: ex, // Referencia directa sin spread
+        }))
+      );
+  }, [exercises]);
 
-  // Combinar todos los eventos y ordenarlos por hora
-  const allTodayEvents = [
-    ...todayAppointments,
-    ...todayMedicationInstances,
-    ...todayExerciseInstances,
-  ].sort((a, b) => a.time.localeCompare(b.time));
+  // Combinar todos los eventos y ordenarlos por hora con useMemo
+  const allTodayEvents = useMemo(() => {
+    const events = [
+      ...todayAppointments,
+      ...todayMedicationInstances,
+      ...todayExerciseInstances,
+    ].sort((a, b) => a.time.localeCompare(b.time));
 
-  // Cargar completions
+    return events;
+  }, [todayAppointments, todayMedicationInstances, todayExerciseInstances]);
+
+  // Cargar completions de forma optimizada en paralelo con límite
   useEffect(() => {
-    const loadCompletions = async () => {
-      const newCompletions: { [key: string]: Completion | null } = {};
+    let cancelled = false;
 
-      for (const event of allTodayEvents) {
-        if (event.type === "appointment") {
-          const completion = await getAppointmentCompletions(event.data.id, "");
-          newCompletions[`appointment-${event.data.id}`] = completion;
-        } else if (event.type === "medication") {
-          const completion = await getMedicationCompletions(
-            event.data.id,
-            event.data.currentScheduledTime
-          );
-          newCompletions[
-            `medication-${event.data.id}-${event.data.currentScheduledTime}`
-          ] = completion;
-        } else if (event.type === "exercise") {
-          const completion = await getExerciseCompletions(
-            event.data.id,
-            event.data.currentScheduledTime
-          );
-          newCompletions[
-            `exercise-${event.data.id}-${event.data.currentScheduledTime}`
-          ] = completion;
-        }
+    const loadCompletions = async () => {
+      if (allTodayEvents.length === 0) {
+        setCompletions({});
+        return;
       }
 
-      setCompletions(newCompletions);
+      const startTime = performance.now();
+
+      try {
+        // Cargar en paralelo con Promise.all para mayor eficiencia
+        const results = await Promise.all(
+          allTodayEvents.map(async (event) => {
+            try {
+              let completion: Completion | null = null;
+              let key: string = "";
+
+              if (event.type === "appointment") {
+                key = `appointment-${event.data.id}`;
+                completion = await getAppointmentCompletions(event.data.id, "");
+              } else if (event.type === "medication") {
+                key = `medication-${event.medicationId}-${event.currentScheduledTime}`;
+                completion = await getMedicationCompletions(
+                  event.medicationId,
+                  event.currentScheduledTime
+                );
+              } else if (event.type === "exercise") {
+                key = `exercise-${event.exerciseId}-${event.currentScheduledTime}`;
+                completion = await getExerciseCompletions(
+                  event.exerciseId,
+                  event.currentScheduledTime
+                );
+              }
+
+              return { key, completion };
+            } catch (error) {
+              console.error("Error loading completion:", error);
+              return null;
+            }
+          })
+        );
+
+        if (!cancelled) {
+          const newCompletions: { [key: string]: Completion | null } = {};
+          results.forEach((result) => {
+            if (result) {
+              newCompletions[result.key] = result.completion;
+            }
+          });
+
+          setCompletions(newCompletions);
+        }
+      } catch (error) {
+        console.error("❌ [HomeScreen] Error cargando completions:", error);
+        if (!cancelled) {
+          setCompletions({});
+        }
+      }
     };
 
     loadCompletions();
-  }, [appointments, medications, exercises]);
 
-  const handleCompleteAppointment = async (id: string) => {
-    await markAppointmentCompleted(id, "");
-    const completion = await getAppointmentCompletions(id, "");
-    setCompletions({ ...completions, [`appointment-${id}`]: completion });
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    allTodayEvents.length,
+    getAppointmentCompletions,
+    getMedicationCompletions,
+    getExerciseCompletions,
+  ]);
 
-  const handleCompleteMedication = async (
-    id: string,
-    scheduledTime: string
-  ) => {
-    await markMedicationCompleted(id, scheduledTime);
-    const completion = await getMedicationCompletions(id, scheduledTime);
-    setCompletions({
-      ...completions,
-      [`medication-${id}-${scheduledTime}`]: completion,
-    });
-  };
+  const handleCompleteAppointment = useCallback(
+    async (id: string) => {
+      await markAppointmentCompleted(id, "");
+      const completion = await getAppointmentCompletions(id, "");
+      setCompletions((prev) => ({
+        ...prev,
+        [`appointment-${id}`]: completion,
+      }));
+    },
+    [markAppointmentCompleted, getAppointmentCompletions]
+  );
 
-  const handleCompleteExercise = async (id: string, scheduledTime: string) => {
-    await markExerciseCompleted(id, scheduledTime);
-    const completion = await getExerciseCompletions(id, scheduledTime);
-    setCompletions({
-      ...completions,
-      [`exercise-${id}-${scheduledTime}`]: completion,
-    });
-  };
+  const handleCompleteMedication = useCallback(
+    async (id: string, scheduledTime: string) => {
+      await markMedicationCompleted(id, scheduledTime);
+      const completion = await getMedicationCompletions(id, scheduledTime);
+      setCompletions((prev) => ({
+        ...prev,
+        [`medication-${id}-${scheduledTime}`]: completion,
+      }));
+    },
+    [markMedicationCompleted, getMedicationCompletions]
+  );
+
+  const handleCompleteExercise = useCallback(
+    async (id: string, scheduledTime: string) => {
+      await markExerciseCompleted(id, scheduledTime);
+      const completion = await getExerciseCompletions(id, scheduledTime);
+      setCompletions((prev) => ({
+        ...prev,
+        [`exercise-${id}-${scheduledTime}`]: completion,
+      }));
+    },
+    [markExerciseCompleted, getExerciseCompletions]
+  );
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("es-ES", {
@@ -185,6 +239,7 @@ export default function HomeScreen({
   };
 
   const getDaysUntil = (date: Date) => {
+    const now = new Date();
     const diffTime = new Date(date).getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return "Hoy";
@@ -193,18 +248,24 @@ export default function HomeScreen({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1 pb-20">
+    <SafeAreaView
+      className="flex-1 bg-cyan-600"
+      edges={["top", "left", "right"]}
+    >
+      <ScrollView
+        className="flex-1 bg-gray-50"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        style={{ flex: 1 }}
+      >
         {/* Header */}
-        <View className="bg-cyan-600 pt-6 pb-10 px-6 rounded-b-3xl">
-          <View className="flex-row items-center justify-between mb-6">
+        <View className="bg-cyan-600 pt-6 pb-6 px-6">
+          <View className="flex-row items-center justify-between">
             <Logo />
-            {/* Icono de acceso compartido */}
             <TouchableOpacity
               onPress={onNavigateToSharedAccess}
               className="w-12 h-12 bg-cyan-700 rounded-xl items-center justify-center"
             >
-              <Users
+              <UserPlus
                 size={24}
                 color="white"
                 strokeWidth={2.5}
@@ -212,152 +273,162 @@ export default function HomeScreen({
               />
             </TouchableOpacity>
           </View>
-          <View className="bg-cyan-700 rounded-2xl p-4">
-            <Text className="text-white text-lg font-semibold mb-1">
-              ¡Bienvenido! 👋
-            </Text>
-            <Text className="text-cyan-50 text-sm">
-              Mantén el bienestar de tus perritos al día
-            </Text>
-          </View>
         </View>
 
-        {/* Lista unificada de eventos de hoy */}
-        {allTodayEvents.length > 0 && (
-          <View className="px-6 mt-6 mb-6">
-            <View className="flex-row items-center mb-3">
-              <Calendar size={24} color="#1F2937" strokeWidth={2} />
-              <Text className="text-gray-800 text-xl font-bold ml-2">Hoy</Text>
-            </View>
-            <View className="gap-3">
-              {allTodayEvents.map((event) => {
-                if (event.type === "appointment") {
-                  return (
-                    <TouchableOpacity
-                      key={`appointment-${event.id}`}
-                      onPress={onNavigateToCalendar}
-                      className="bg-white rounded-2xl p-4 shadow-sm"
-                    >
-                      <View className="flex-row items-center">
-                        <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center mr-3">
-                          <Calendar size={24} color="#16a34a" strokeWidth={2} />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-gray-900 font-semibold mb-1">
-                            {event.dogName} -{" "}
-                            {appointmentTypeLabels[event.data.type]}
-                          </Text>
-                          <Text className="text-gray-600 text-sm">
-                            {event.time}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                } else if (event.type === "medication") {
-                  const completion =
-                    completions[
-                      `medication-${event.data.id}-${event.data.currentScheduledTime}`
-                    ];
-                  return (
-                    <SwipeableCard
-                      key={`medication-${event.data.id}-${event.data.currentScheduledTime}`}
-                      onComplete={() =>
-                        handleCompleteMedication(
-                          event.data.id,
-                          event.data.currentScheduledTime
-                        )
-                      }
-                      isCompleted={!!completion}
-                      completedBy={completion ? "Listo" : undefined}
-                    >
+        {/* Contenido con redondeado superior */}
+        <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4">
+          {/* Lista unificada de eventos de hoy */}
+          {allTodayEvents.length > 0 && (
+            <View className="px-6 mt-6 mb-6">
+              <View className="flex-row items-center mb-3">
+                <Calendar size={24} color="#1F2937" strokeWidth={2} />
+                <Text className="text-gray-800 text-xl font-bold ml-2">
+                  Hoy
+                </Text>
+              </View>
+              <View className="gap-3">
+                {allTodayEvents.map((event) => {
+                  if (event.type === "appointment") {
+                    return (
                       <TouchableOpacity
-                        onPress={onNavigateToMedications}
-                        className="flex-row items-center"
+                        key={`appointment-${event.id}`}
+                        onPress={onNavigateToCalendar}
+                        className="bg-white rounded-2xl p-4 shadow-sm"
                       >
-                        <View className="w-12 h-12 bg-pink-100 rounded-xl items-center justify-center mr-3">
-                          <Pill size={24} color="#db2777" strokeWidth={2} />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-gray-900 font-semibold mb-1">
-                            {event.dogName} -{" "}
-                            {event.data.name.charAt(0).toUpperCase() +
-                              event.data.name.slice(1)}
-                          </Text>
-                          <Text className="text-gray-600 text-sm">
-                            {event.data.dosage} •{" "}
-                            {event.data.currentScheduledTime}
-                          </Text>
-                          {event.data.scheduledTimes.length > 1 && (
-                            <Text className="text-pink-500 text-xs mt-1">
-                              {event.data.scheduledTimes.length}x al día
+                        <View className="flex-row items-center">
+                          <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center mr-3">
+                            <Calendar
+                              size={24}
+                              color="#16a34a"
+                              strokeWidth={2}
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-gray-900 font-semibold mb-1">
+                              {event.dogName} -{" "}
+                              {appointmentTypeLabels[event.data.type]}
                             </Text>
-                          )}
+                            <Text className="text-gray-600 text-sm">
+                              {event.time}
+                            </Text>
+                          </View>
                         </View>
                       </TouchableOpacity>
-                    </SwipeableCard>
-                  );
-                } else {
-                  // exercise
-                  const completion =
-                    completions[
-                      `exercise-${event.data.id}-${event.data.currentScheduledTime}`
-                    ];
-                  return (
-                    <SwipeableCard
-                      key={`exercise-${event.data.id}-${event.data.currentScheduledTime}`}
-                      onComplete={() =>
-                        handleCompleteExercise(
-                          event.data.id,
-                          event.data.currentScheduledTime
-                        )
-                      }
-                      isCompleted={!!completion}
-                      completedBy={completion ? "Listo" : undefined}
-                    >
-                      <TouchableOpacity
-                        onPress={onNavigateToExercises}
-                        className="flex-row items-center"
-                      >
-                        <View className="w-12 h-12 bg-teal-100 rounded-xl items-center justify-center mr-3">
-                          <Dumbbell size={24} color="#14b8a6" strokeWidth={2} />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="text-gray-900 font-semibold mb-1">
-                            {event.dogName} -{" "}
-                            {exerciseTypeLabels[event.data.type]}
-                          </Text>
-                          <Text className="text-gray-600 text-sm">
-                            {event.data.durationMinutes} min •{" "}
-                            {event.data.currentScheduledTime}
-                          </Text>
-                          {event.data.scheduledTimes.length > 1 && (
-                            <Text className="text-teal-500 text-xs mt-1">
-                              {event.data.scheduledTimes.length}x al día
-                            </Text>
-                          )}
-                        </View>
-                      </TouchableOpacity>
-                    </SwipeableCard>
-                  );
-                }
-              })}
-            </View>
-          </View>
-        )}
+                    );
+                  } else if (event.type === "medication") {
+                    const completion =
+                      completions[
+                        `medication-${event.medicationId}-${event.currentScheduledTime}`
+                      ];
+                    // Ocultar si está completado
+                    if (completion) return null;
 
-        {/* Mensaje si no hay eventos */}
-        {allTodayEvents.length === 0 && (
-          <View className="px-6 mt-20 items-center">
-            <Sparkles size={80} color="#9CA3AF" strokeWidth={1.5} />
-            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
-              Todo tranquilo por ahora
-            </Text>
-            <Text className="text-gray-400 text-sm text-center">
-              No hay eventos programados para hoy
-            </Text>
-          </View>
-        )}
+                    return (
+                      <SwipeableCard
+                        key={`medication-${event.medicationId}-${event.currentScheduledTime}`}
+                        onComplete={() =>
+                          handleCompleteMedication(
+                            event.medicationId,
+                            event.currentScheduledTime
+                          )
+                        }
+                        isCompleted={!!completion}
+                        completedBy={completion ? "Listo" : undefined}
+                      >
+                        <TouchableOpacity
+                          onPress={onNavigateToMedications}
+                          className="flex-row items-center"
+                        >
+                          <View className="w-12 h-12 bg-pink-100 rounded-xl items-center justify-center mr-3">
+                            <Pill size={24} color="#db2777" strokeWidth={2} />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-gray-900 font-semibold mb-1">
+                              {event.dogName} -{" "}
+                              {event.data.name.charAt(0).toUpperCase() +
+                                event.data.name.slice(1)}
+                            </Text>
+                            <Text className="text-gray-600 text-sm">
+                              {event.data.dosage} • {event.currentScheduledTime}
+                            </Text>
+                            {event.data.scheduledTimes.length > 1 && (
+                              <Text className="text-pink-500 text-xs mt-1">
+                                {event.data.scheduledTimes.length}x al día
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      </SwipeableCard>
+                    );
+                  } else {
+                    // exercise
+                    const completion =
+                      completions[
+                        `exercise-${event.exerciseId}-${event.currentScheduledTime}`
+                      ];
+                    // Ocultar si está completado
+                    if (completion) return null;
+
+                    return (
+                      <SwipeableCard
+                        key={`exercise-${event.exerciseId}-${event.currentScheduledTime}`}
+                        onComplete={() =>
+                          handleCompleteExercise(
+                            event.exerciseId,
+                            event.currentScheduledTime
+                          )
+                        }
+                        isCompleted={!!completion}
+                        completedBy={completion ? "Listo" : undefined}
+                      >
+                        <TouchableOpacity
+                          onPress={onNavigateToExercises}
+                          className="flex-row items-center"
+                        >
+                          <View className="w-12 h-12 bg-teal-100 rounded-xl items-center justify-center mr-3">
+                            <Dumbbell
+                              size={24}
+                              color="#14b8a6"
+                              strokeWidth={2}
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-gray-900 font-semibold mb-1">
+                              {event.dogName} -{" "}
+                              {exerciseTypeLabels[event.data.type]}
+                            </Text>
+                            <Text className="text-gray-600 text-sm">
+                              {event.data.durationMinutes} min •{" "}
+                              {event.currentScheduledTime}
+                            </Text>
+                            {event.data.scheduledTimes.length > 1 && (
+                              <Text className="text-teal-500 text-xs mt-1">
+                                {event.data.scheduledTimes.length}x al día
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      </SwipeableCard>
+                    );
+                  }
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* Mensaje si no hay eventos */}
+          {allTodayEvents.length === 0 && (
+            <View className="px-6 mt-20 items-center">
+              <Sparkles size={80} color="#9CA3AF" strokeWidth={1.5} />
+              <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
+                Todo tranquilo por ahora
+              </Text>
+              <Text className="text-gray-400 text-sm text-center">
+                No hay eventos programados para hoy
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

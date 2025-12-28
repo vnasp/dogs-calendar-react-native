@@ -8,6 +8,7 @@ import {
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
+import Logo from "../components/Logo";
 import HeaderAddButton from "../components/HeaderAddButton";
 import AppointmentIcon from "../components/AppointmentIcon";
 import EditButton from "../components/EditButton";
@@ -79,179 +80,185 @@ export default function CalendarListScreen({
   const filteredAppointments = getFilteredAppointments();
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <ChevronLeft size={28} color="white" strokeWidth={2.5} />
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            Calendario
-          </Text>
-          {dogs.length > 0 && (
-            <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
-          )}
-        </View>
-
-        {/* Filtros */}
-        <View className="flex-row gap-2">
-          <TouchableOpacity
-            onPress={() => setFilter("upcoming")}
-            className={`flex-1 py-2 rounded-lg ${
-              filter === "upcoming" ? "bg-white" : "bg-green-500"
-            }`}
-          >
-            <Text
-              className={`text-center font-semibold ${
-                filter === "upcoming" ? "text-green-700" : "text-white"
-              }`}
-            >
-              Próximas
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setFilter("past")}
-            className={`flex-1 py-2 rounded-lg ${
-              filter === "past" ? "bg-white" : "bg-green-500"
-            }`}
-          >
-            <Text
-              className={`text-center font-semibold ${
-                filter === "past" ? "text-green-700" : "text-white"
-              }`}
-            >
-              Pasadas
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setFilter("all")}
-            className={`flex-1 py-2 rounded-lg ${
-              filter === "all" ? "bg-white" : "bg-green-500"
-            }`}
-          >
-            <Text
-              className={`text-center font-semibold ${
-                filter === "all" ? "text-green-700" : "text-white"
-              }`}
-            >
-              Todas
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView className="flex-1 px-6 pt-6">
-        {dogs.length === 0 ? (
-          <View className="items-center justify-center py-20">
-            <Dog size={80} color="#9CA3AF" strokeWidth={1.5} />
-            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
-              Primero agrega un perro
-            </Text>
-            <Text className="text-gray-400 text-sm text-center">
-              Necesitas tener perros registrados para agendar citas
-            </Text>
+    <SafeAreaView
+      className="flex-1 bg-cyan-600"
+      edges={["top", "left", "right"]}
+    >
+      <ScrollView
+        className="flex-1 bg-gray-50"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        style={{ flex: 1 }}
+      >
+        {/* Header */}
+        <View className="bg-cyan-600 pt-6 pb-6 px-6">
+          <View className="flex-row items-center justify-between mb-3">
+            <Logo />
+            {dogs.length > 0 && (
+              <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
+            )}
           </View>
-        ) : filteredAppointments.length === 0 ? (
-          <View className="items-center justify-center py-20">
-            <CalendarIcon size={80} color="#9CA3AF" strokeWidth={1.5} />
-            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
-              No hay citas{" "}
-              {filter === "upcoming"
-                ? "próximas"
-                : filter === "past"
-                ? "pasadas"
-                : ""}
-            </Text>
-            <Text className="text-gray-400 text-sm text-center">
-              Agenda una nueva cita veterinaria
-            </Text>
-          </View>
-        ) : (
-          <View className="gap-4 pb-6">
-            {filteredAppointments.map((appointment) => (
-              <View
-                key={appointment.id}
-                className="bg-white rounded-2xl p-4 shadow-sm"
+          <Text className="text-white text-xl font-bold mb-4">Calendario</Text>
+
+          {/* Filtros */}
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={() => setFilter("upcoming")}
+              className={`flex-1 py-2 rounded-lg ${
+                filter === "upcoming" ? "bg-white" : "bg-green-500"
+              }`}
+            >
+              <Text
+                className={`text-center font-semibold ${
+                  filter === "upcoming" ? "text-green-700" : "text-white"
+                }`}
               >
-                <View className="flex-row items-start mb-3">
-                  {/* Icono y tipo */}
-                  <View
-                    className={`w-12 h-12 ${
-                      appointmentTypeColors[appointment.type]
-                    } rounded-xl items-center justify-center mr-3`}
-                  >
-                    <AppointmentIcon
-                      type={appointment.type}
-                      size={24}
-                      color="#1F2937"
-                      strokeWidth={2}
-                    />
-                  </View>
+                Próximas
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setFilter("past")}
+              className={`flex-1 py-2 rounded-lg ${
+                filter === "past" ? "bg-white" : "bg-green-500"
+              }`}
+            >
+              <Text
+                className={`text-center font-semibold ${
+                  filter === "past" ? "text-green-700" : "text-white"
+                }`}
+              >
+                Pasadas
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setFilter("all")}
+              className={`flex-1 py-2 rounded-lg ${
+                filter === "all" ? "bg-white" : "bg-green-500"
+              }`}
+            >
+              <Text
+                className={`text-center font-semibold ${
+                  filter === "all" ? "text-green-700" : "text-white"
+                }`}
+              >
+                Todas
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-                  {/* Información */}
-                  <View className="flex-1">
-                    <Text className="text-gray-900 text-lg font-bold mb-1">
-                      {appointmentTypeLabels[appointment.type]}
-                    </Text>
-                    <View className="flex-row items-center mb-1">
-                      <Dog size={14} color="#374151" strokeWidth={2} />
-                      <Text className="text-gray-700 text-base ml-1">
-                        {appointment.dogName}
+        {/* Contenido con redondeado superior */}
+        <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4 px-6 pt-6">
+          {dogs.length === 0 ? (
+            <View className="items-center justify-center py-20">
+              <Dog size={80} color="#9CA3AF" strokeWidth={1.5} />
+              <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
+                Primero agrega un perro
+              </Text>
+              <Text className="text-gray-400 text-sm text-center">
+                Necesitas tener perros registrados para agendar citas
+              </Text>
+            </View>
+          ) : filteredAppointments.length === 0 ? (
+            <View className="items-center justify-center py-20">
+              <CalendarIcon size={80} color="#9CA3AF" strokeWidth={1.5} />
+              <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
+                No hay citas{" "}
+                {filter === "upcoming"
+                  ? "próximas"
+                  : filter === "past"
+                  ? "pasadas"
+                  : ""}
+              </Text>
+              <Text className="text-gray-400 text-sm text-center">
+                Agenda una nueva cita veterinaria
+              </Text>
+            </View>
+          ) : (
+            <View className="gap-4 pb-6">
+              {filteredAppointments.map((appointment) => (
+                <View
+                  key={appointment.id}
+                  className="bg-white rounded-2xl p-4 shadow-sm"
+                >
+                  <View className="flex-row items-start mb-3">
+                    {/* Icono y tipo */}
+                    <View
+                      className={`w-12 h-12 ${
+                        appointmentTypeColors[appointment.type]
+                      } rounded-xl items-center justify-center mr-3`}
+                    >
+                      <AppointmentIcon
+                        type={appointment.type}
+                        size={24}
+                        color="#1F2937"
+                        strokeWidth={2}
+                      />
+                    </View>
+
+                    {/* Información */}
+                    <View className="flex-1">
+                      <Text className="text-gray-900 text-lg font-bold mb-1">
+                        {appointmentTypeLabels[appointment.type]}
                       </Text>
-                    </View>
-                    <View className="flex-row items-center gap-3 mb-1">
-                      <View className="flex-row items-center">
-                        <CalendarIcon
-                          size={14}
-                          color="#4B5563"
-                          strokeWidth={2}
-                        />
-                        <Text className="text-gray-600 text-sm ml-1">
-                          {formatDate(appointment.date)}
+                      <View className="flex-row items-center mb-1">
+                        <Dog size={14} color="#374151" strokeWidth={2} />
+                        <Text className="text-gray-700 text-base ml-1">
+                          {appointment.dogName}
                         </Text>
                       </View>
-                      <View className="flex-row items-center">
-                        <Clock size={14} color="#4B5563" strokeWidth={2} />
-                        <Text className="text-gray-600 text-sm ml-1">
-                          {appointment.time}
-                        </Text>
-                      </View>
-                    </View>
-                    {appointment.notificationTime &&
-                      appointment.notificationTime !== "none" && (
-                        <View className="flex-row items-center mt-1">
-                          <Bell size={14} color="#2563eb" strokeWidth={2} />
-                          <Text className="text-blue-600 text-sm ml-1">
-                            {notificationLabels[appointment.notificationTime]}
+                      <View className="flex-row items-center gap-3 mb-1">
+                        <View className="flex-row items-center">
+                          <CalendarIcon
+                            size={14}
+                            color="#4B5563"
+                            strokeWidth={2}
+                          />
+                          <Text className="text-gray-600 text-sm ml-1">
+                            {formatDate(appointment.date)}
                           </Text>
                         </View>
+                        <View className="flex-row items-center">
+                          <Clock size={14} color="#4B5563" strokeWidth={2} />
+                          <Text className="text-gray-600 text-sm ml-1">
+                            {appointment.time}
+                          </Text>
+                        </View>
+                      </View>
+                      {appointment.notificationTime &&
+                        appointment.notificationTime !== "none" && (
+                          <View className="flex-row items-center mt-1">
+                            <Bell size={14} color="#2563eb" strokeWidth={2} />
+                            <Text className="text-blue-600 text-sm ml-1">
+                              {notificationLabels[appointment.notificationTime]}
+                            </Text>
+                          </View>
+                        )}
+                      {appointment.notes && (
+                        <Text className="text-gray-500 text-sm mt-1">
+                          {appointment.notes}
+                        </Text>
                       )}
-                    {appointment.notes && (
-                      <Text className="text-gray-500 text-sm mt-1">
-                        {appointment.notes}
-                      </Text>
-                    )}
+                    </View>
                   </View>
-                </View>
 
-                {/* Botones de acción */}
-                <View className="flex-row gap-2">
-                  <View className="flex-1">
-                    <EditButton
-                      onPress={() => onNavigateToAddEdit(appointment.id)}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <DeleteButton
-                      onPress={() => handleDelete(appointment.id)}
-                    />
+                  {/* Botones de acción */}
+                  <View className="flex-row gap-2">
+                    <View className="flex-1">
+                      <EditButton
+                        onPress={() => onNavigateToAddEdit(appointment.id)}
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <DeleteButton
+                        onPress={() => handleDelete(appointment.id)}
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
-          </View>
-        )}
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

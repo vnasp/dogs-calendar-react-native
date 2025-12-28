@@ -36,11 +36,15 @@ export default function Footer({
   const isActive = (screen: string) => currentScreen === screen;
 
   return (
-    <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
+    <View
+      className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe"
+      style={{ zIndex: 1000, elevation: 1000 }}
+    >
       <View className="flex-row">
         <TouchableOpacity
           onPress={onNavigateToHome}
           className="flex-1 items-center py-3"
+          activeOpacity={0.7}
         >
           <Home
             size={24}
@@ -59,6 +63,7 @@ export default function Footer({
         <TouchableOpacity
           onPress={onNavigateToDogsList}
           className="flex-1 items-center py-3"
+          activeOpacity={0.7}
         >
           <Dog
             size={24}
@@ -79,6 +84,7 @@ export default function Footer({
         <TouchableOpacity
           onPress={onNavigateToCalendar}
           className="flex-1 items-center py-3"
+          activeOpacity={0.7}
         >
           <Calendar
             size={24}
@@ -99,6 +105,7 @@ export default function Footer({
         <TouchableOpacity
           onPress={onNavigateToMedications}
           className="flex-1 items-center py-3"
+          activeOpacity={0.7}
         >
           <Pill
             size={24}
@@ -119,6 +126,7 @@ export default function Footer({
         <TouchableOpacity
           onPress={onNavigateToExercises}
           className="flex-1 items-center py-3"
+          activeOpacity={0.7}
         >
           <Dumbbell
             size={24}

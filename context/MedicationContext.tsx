@@ -4,6 +4,7 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
 import { supabase } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
@@ -378,60 +379,63 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const markMedicationCompleted = async (
-    medicationId: string,
-    scheduledTime: string
-  ) => {
-    try {
-      if (!user) throw new Error("No user authenticated");
+  const markMedicationCompleted = useCallback(
+    async (medicationId: string, scheduledTime: string) => {
+      try {
+        if (!user) throw new Error("No user authenticated");
 
-      const { error } = await supabase.from("completions").insert({
-        user_id: user.id,
-        item_type: "medication",
-        item_id: medicationId,
-        scheduled_time: scheduledTime,
-        completed_date: new Date().toISOString().split("T")[0],
-      });
+        const { error } = await supabase.from("completions").insert({
+          user_id: user.id,
+          item_type: "medication",
+          item_id: medicationId,
+          scheduled_time: scheduledTime,
+          completed_date: new Date().toISOString().split("T")[0],
+        });
 
-      if (error) throw error;
-    } catch (error) {
-      console.error("Error marking medication completed:", error);
-      throw error;
-    }
-  };
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error marking medication completed:", error);
+        throw error;
+      }
+    },
+    [user]
+  );
 
-  const getTodayCompletions = async (
-    medicationId: string,
-    scheduledTime: string
-  ): Promise<Completion | null> => {
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const { data, error } = await supabase
-        .from("completions")
-        .select("*")
-        .eq("item_type", "medication")
-        .eq("item_id", medicationId)
-        .eq("scheduled_time", scheduledTime)
-        .eq("completed_date", today)
-        .single();
+  const getTodayCompletions = useCallback(
+    async (
+      medicationId: string,
+      scheduledTime: string
+    ): Promise<Completion | null> => {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const { data, error } = await supabase
+          .from("completions")
+          .select("*")
+          .eq("item_type", "medication")
+          .eq("item_id", medicationId)
+          .eq("scheduled_time", scheduledTime)
+          .eq("completed_date", today)
+          .single();
 
-      if (error && error.code !== "PGRST116") throw error;
-      if (!data) return null;
+        if (error && error.code !== "PGRST116") throw error;
+        if (!data) return null;
 
-      return {
-        id: data.id,
-        userId: data.user_id,
-        itemType: data.item_type,
-        itemId: data.item_id,
-        scheduledTime: data.scheduled_time,
-        completedDate: data.completed_date,
-        completedAt: new Date(data.completed_at),
-      };
-    } catch (error) {
-      console.error("Error getting completions:", error);
-      return null;
-    }
-  };
+        return {
+          id: data.id,
+          userId: data.user_id,
+          itemType: data.item_type,
+          itemId: data.item_id,
+          scheduledTime: data.scheduled_time,
+          completedDate: data.completed_date,
+          completedAt: new Date(data.completed_at),
+        };
+      } catch (error) {
+        console.error("Error getting completions:", error);
+        return null;
+      }
+    },
+    []
+  );
 
   return (
     <MedicationContext.Provider

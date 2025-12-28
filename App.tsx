@@ -2,6 +2,10 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
 import * as SplashScreen from "expo-splash-screen";
+import { LogBox } from "react-native";
+
+// Ocultar el LogBox para que no bloquee el footer
+LogBox.ignoreAllLogs(true);
 
 // Mantener el splash nativo visible hasta que la app esté lista
 SplashScreen.preventAutoHideAsync();

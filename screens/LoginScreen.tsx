@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import PrimaryButton from "../components/PrimaryButton";
+import Logo from "../components/Logo";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -39,7 +40,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
+    <SafeAreaView className="flex-1 bg-cyan-600">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -51,10 +52,8 @@ export default function LoginScreen() {
           <View className="flex-1 justify-center px-6">
             {/* Header */}
             <View className="items-center mb-12">
-              <Text className="text-4xl font-bold text-cyan-600 mb-2">
-                🐕 Dogs Calendar
-              </Text>
-              <Text className="text-gray-600 text-center text-lg">
+              <Logo />
+              <Text className="text-white text-center text-lg">
                 Gestiona la salud de tus perros
               </Text>
             </View>
@@ -63,7 +62,7 @@ export default function LoginScreen() {
             <View className="space-y-4">
               {/* Email */}
               <View>
-                <Text className="text-gray-700 font-semibold mb-2">
+                <Text className="text-white font-semibold mb-2">
                   Correo electrónico
                 </Text>
                 <TextInput
@@ -73,14 +72,14 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="bg-white px-4 py-4 rounded-xl text-gray-900 text-base"
+                  className="bg-white px-4 py-4 rounded-xl text-gray-700 text-base"
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
 
               {/* Password */}
               <View className="mt-4">
-                <Text className="text-gray-700 font-semibold mb-2">
+                <Text className="text-white font-semibold mb-2">
                   Contraseña
                 </Text>
                 <TextInput
@@ -90,7 +89,7 @@ export default function LoginScreen() {
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  className="bg-white px-4 py-4 rounded-xl text-gray-900 text-base"
+                  className="bg-white px-4 py-4 rounded-xl text-gray-700 text-base"
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -106,11 +105,11 @@ export default function LoginScreen() {
 
               {/* Toggle Sign Up / Sign In */}
               <View className="flex-row justify-center items-center mt-6">
-                <Text className="text-gray-600">
+                <Text className="text-white">
                   {isSignUp ? "¿Ya tienes cuenta? " : "¿No tienes cuenta? "}
                 </Text>
                 <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
-                  <Text className="text-cyan-600 font-bold">
+                  <Text className="text-white font-bold">
                     {isSignUp ? "Inicia sesión" : "Regístrate"}
                   </Text>
                 </TouchableOpacity>
