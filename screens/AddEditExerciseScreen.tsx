@@ -73,6 +73,7 @@ export default function AddEditExerciseScreen({
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
     existingExercise?.notificationTime || "15min"
   );
+  const [saving, setSaving] = useState(false);
 
   // Gesto de deslizar para regresar
   const panResponder = useRef(
@@ -109,7 +110,7 @@ export default function AddEditExerciseScreen({
     "otro",
   ];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedDogId) {
       Alert.alert("Error", "Por favor selecciona un perro");
       return;
@@ -147,32 +148,39 @@ export default function AddEditExerciseScreen({
       return;
     }
 
-    const exerciseData = {
-      dogId: selectedDogId,
-      dogName: selectedDog.name,
-      type,
-      durationMinutes: duration,
-      timesPerDay: times,
-      startTime,
-      endTime,
-      scheduledTimes,
-      startDate,
-      isPermanent,
-      durationWeeks: isPermanent ? undefined : weeks,
-      endDate,
-      notes: notes.trim(),
-      isActive: existingExercise?.isActive ?? true,
-      notificationTime,
-      notificationIds: existingExercise?.notificationIds || [],
-    };
+    try {
+      setSaving(true);
+      const exerciseData = {
+        dogId: selectedDogId,
+        dogName: selectedDog.name,
+        type,
+        durationMinutes: duration,
+        timesPerDay: times,
+        startTime,
+        endTime,
+        scheduledTimes,
+        startDate,
+        isPermanent,
+        durationWeeks: isPermanent ? undefined : weeks,
+        endDate,
+        notes: notes.trim(),
+        isActive: existingExercise?.isActive ?? true,
+        notificationTime,
+        notificationIds: existingExercise?.notificationIds || [],
+      };
 
-    if (isEditing && exerciseId) {
-      updateExercise(exerciseId, exerciseData);
-    } else {
-      addExercise(exerciseData);
+      if (isEditing && exerciseId) {
+        await updateExercise(exerciseId, exerciseData);
+      } else {
+        await addExercise(exerciseData);
+      }
+
+      onNavigateBack();
+    } catch (error) {
+      Alert.alert("Error", "No se pudo guardar la rutina");
+    } finally {
+      setSaving(false);
     }
-
-    onNavigateBack();
   };
 
   // Duraciones comunes
@@ -511,6 +519,7 @@ export default function AddEditExerciseScreen({
         <PrimaryButton
           onPress={handleSave}
           text={isEditing ? "Guardar cambios" : "Crear rutina"}
+          loading={saving}
         />
       </ScrollView>
     </SafeAreaView>

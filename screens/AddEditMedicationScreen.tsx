@@ -67,6 +67,7 @@ export default function AddEditMedicationScreen({
   // Estados para los date pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Gesto de deslizar para regresar
   const panResponder = useRef(
@@ -104,7 +105,7 @@ export default function AddEditMedicationScreen({
   const commonFrequencies = [6, 8, 12, 24];
   const commonDurations = [3, 7, 20, 30];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedDogId) {
       Alert.alert("Error", "Por favor selecciona un perro");
       return;
@@ -142,30 +143,37 @@ export default function AddEditMedicationScreen({
       return;
     }
 
-    const medicationData = {
-      dogId: selectedDogId,
-      dogName: selectedDog.name,
-      name: name.trim(),
-      dosage: dosage.trim(),
-      frequencyHours: freq,
-      durationDays: duration,
-      startDate,
-      startTime,
-      scheduledTimes,
-      endDate,
-      notes: notes.trim(),
-      isActive: existingMedication?.isActive ?? true,
-      notificationTime,
-      notificationIds: existingMedication?.notificationIds || [],
-    };
+    try {
+      setSaving(true);
+      const medicationData = {
+        dogId: selectedDogId,
+        dogName: selectedDog.name,
+        name: name.trim(),
+        dosage: dosage.trim(),
+        frequencyHours: freq,
+        durationDays: duration,
+        startDate,
+        startTime,
+        scheduledTimes,
+        endDate,
+        notes: notes.trim(),
+        isActive: existingMedication?.isActive ?? true,
+        notificationTime,
+        notificationIds: existingMedication?.notificationIds || [],
+      };
 
-    if (isEditing && medicationId) {
-      updateMedication(medicationId, medicationData);
-    } else {
-      addMedication(medicationData);
+      if (isEditing && medicationId) {
+        await updateMedication(medicationId, medicationData);
+      } else {
+        await addMedication(medicationData);
+      }
+
+      onNavigateBack();
+    } catch (error) {
+      Alert.alert("Error", "No se pudo guardar el medicamento");
+    } finally {
+      setSaving(false);
     }
-
-    onNavigateBack();
   };
 
   const formatDate = (date: Date) => {
@@ -489,6 +497,7 @@ export default function AddEditMedicationScreen({
           <PrimaryButton
             onPress={handleSave}
             text={isEditing ? "Guardar cambios" : "Crear medicamento"}
+            loading={saving}
           />
         </ScrollView>
       </KeyboardAvoidingView>

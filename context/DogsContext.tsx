@@ -83,6 +83,7 @@ export function DogsProvider({ children }: { children: ReactNode }) {
 
       // Subir foto a Supabase Storage si existe
       let photoUrl = dog.photo;
+
       if (dog.photo && !dog.photo.startsWith("http")) {
         photoUrl = await uploadDogPhoto(dog.photo, user.id);
       }

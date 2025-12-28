@@ -59,6 +59,7 @@ export default function AddEditAppointmentScreen({
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Gesto de deslizar para regresar
   const panResponder = useRef(
@@ -97,23 +98,30 @@ export default function AddEditAppointmentScreen({
       return;
     }
 
-    const appointmentData = {
-      dogId: selectedDogId,
-      dogName: selectedDog.name,
-      date,
-      time,
-      type,
-      notes: notes.trim(),
-      notificationTime,
-    };
+    try {
+      setSaving(true);
+      const appointmentData = {
+        dogId: selectedDogId,
+        dogName: selectedDog.name,
+        date,
+        time,
+        type,
+        notes: notes.trim(),
+        notificationTime,
+      };
 
-    if (isEditing && appointmentId) {
-      await updateAppointment(appointmentId, appointmentData);
-    } else {
-      await addAppointment(appointmentData);
+      if (isEditing && appointmentId) {
+        await updateAppointment(appointmentId, appointmentData);
+      } else {
+        await addAppointment(appointmentData);
+      }
+
+      onNavigateBack();
+    } catch (error) {
+      Alert.alert("Error", "No se pudo guardar la cita");
+    } finally {
+      setSaving(false);
     }
-
-    onNavigateBack();
   };
 
   const formatDate = (date: Date) => {
@@ -307,6 +315,7 @@ export default function AddEditAppointmentScreen({
         <PrimaryButton
           onPress={handleSave}
           text={isEditing ? "Guardar cambios" : "Agendar cita"}
+          loading={saving}
         />
       </ScrollView>
     </SafeAreaView>

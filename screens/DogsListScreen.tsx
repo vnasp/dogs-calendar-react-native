@@ -98,6 +98,14 @@ export default function DogsListScreen({
                           source={{ uri: dog.photo }}
                           className="w-full h-full"
                           resizeMode="cover"
+                          onError={(e) =>
+                            console.log(
+                              "Error cargando foto de",
+                              dog.name,
+                              ":",
+                              e.nativeEvent.error
+                            )
+                          }
                         />
                       ) : (
                         <View className="w-full h-full items-center justify-center">

@@ -44,6 +44,7 @@ export default function AddEditDogScreen({
     existingDog?.isNeutered || false
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Gesto de deslizar para regresar
   const panResponder = useRef(
@@ -72,22 +73,27 @@ export default function AddEditDogScreen({
   };
 
   const pickImage = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
+    try {
+      const hasPermission = await requestPermissions();
+      if (!hasPermission) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
 
-    if (!result.canceled) {
-      setPhoto(result.assets[0].uri);
+      if (!result.canceled) {
+        setPhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error en pickImage:", error);
+      Alert.alert("Error", "No se pudo abrir el selector de imágenes");
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert("Error", "Por favor ingresa el nombre del perro");
       return;
@@ -97,22 +103,29 @@ export default function AddEditDogScreen({
       return;
     }
 
-    const dogData = {
-      name: name.trim(),
-      photo,
-      breed: breed.trim(),
-      birthDate,
-      gender,
-      isNeutered,
-    };
+    try {
+      setSaving(true);
+      const dogData = {
+        name: name.trim(),
+        photo,
+        breed: breed.trim(),
+        birthDate,
+        gender,
+        isNeutered,
+      };
 
-    if (isEditing && dogId) {
-      updateDog(dogId, dogData);
-    } else {
-      addDog(dogData);
+      if (isEditing && dogId) {
+        await updateDog(dogId, dogData);
+      } else {
+        await addDog(dogData);
+      }
+
+      onNavigateBack();
+    } catch (error) {
+      Alert.alert("Error", "No se pudo guardar el perro");
+    } finally {
+      setSaving(false);
     }
-
-    onNavigateBack();
   };
 
   const formatDate = (date: Date) => {
@@ -157,6 +170,9 @@ export default function AddEditDogScreen({
                   source={{ uri: photo }}
                   className="w-full h-full"
                   resizeMode="cover"
+                  onError={(e) =>
+                    console.log("Error cargando imagen:", e.nativeEvent.error)
+                  }
                 />
               ) : (
                 <Text className="text-6xl">📷</Text>
@@ -295,6 +311,7 @@ export default function AddEditDogScreen({
         <PrimaryButton
           onPress={handleSave}
           text={isEditing ? "Guardar cambios" : "Agregar perro"}
+          loading={saving}
         />
       </ScrollView>
     </SafeAreaView>

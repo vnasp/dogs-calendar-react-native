@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { decode } from "base64-arraybuffer";
 
 const BUCKET_NAME = "dog-photos";
@@ -17,14 +17,14 @@ export async function uploadDogPhoto(
   try {
     // Leer el archivo como base64
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: "base64",
     });
 
     // Generar nombre único para el archivo
-    const fileExt = uri.split(".").pop() || "jpg";
+    const fileExt = uri.split(".").pop()?.split("?")[0] || "jpg";
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
-    // Convertir base64 a ArrayBuffer
+    // Convertir base64 a ArrayBuffer usando la librería instalada
     const arrayBuffer = decode(base64);
 
     // Subir a Supabase Storage
