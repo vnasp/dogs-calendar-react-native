@@ -12,6 +12,21 @@ import { useMedication } from "../context/MedicationContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
 import HeaderAddButton from "../components/HeaderAddButton";
+import EditButton from "../components/EditButton";
+import DeleteButton from "../components/DeleteButton";
+import {
+  ChevronLeft,
+  Dog,
+  Pill,
+  Syringe,
+  Clock,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Infinity,
+  X,
+  Bell,
+} from "lucide-react-native";
 
 interface MedicationsListScreenProps {
   onNavigateToAddEdit: (medicationId?: string) => void;
@@ -74,7 +89,7 @@ export default function MedicationsListScreen({
         <View className="flex-row items-center justify-between mb-2">
           <View className="flex-row items-center flex-1">
             <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-              <Text className="text-white text-2xl">‹</Text>
+              <ChevronLeft size={28} color="white" strokeWidth={2.5} />
             </TouchableOpacity>
             <Text className="text-white text-2xl font-bold">Medicamentos</Text>
           </View>
@@ -87,8 +102,8 @@ export default function MedicationsListScreen({
       <ScrollView className="flex-1 px-6 pt-6">
         {dogs.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">🐕</Text>
-            <Text className="text-gray-500 text-lg text-center mb-2">
+            <Dog size={80} color="#9CA3AF" strokeWidth={1.5} />
+            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
               Primero agrega un perro
             </Text>
             <Text className="text-gray-400 text-sm text-center">
@@ -97,8 +112,8 @@ export default function MedicationsListScreen({
           </View>
         ) : medications.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">💊</Text>
-            <Text className="text-gray-500 text-lg text-center mb-2">
+            <Pill size={80} color="#9CA3AF" strokeWidth={1.5} />
+            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
               No hay medicamentos registrados
             </Text>
             <Text className="text-gray-400 text-sm text-center">
@@ -112,8 +127,8 @@ export default function MedicationsListScreen({
                 <View key={dog.id}>
                   {/* Nombre del perro */}
                   <View className="flex-row items-center mb-3">
-                    <Text className="text-2xl mr-2">🐕</Text>
-                    <Text className="text-gray-900 text-xl font-bold">
+                    <Dog size={24} color="#1F2937" strokeWidth={2} />
+                    <Text className="text-gray-900 text-xl font-bold ml-2">
                       {dog.name}
                     </Text>
                   </View>
@@ -143,7 +158,7 @@ export default function MedicationsListScreen({
                           <View className="flex-row items-start mb-3">
                             {/* Icono */}
                             <View className="w-12 h-12 bg-pink-100 rounded-xl items-center justify-center mr-3">
-                              <Text className="text-2xl">💊</Text>
+                              <Pill size={24} color="#db2777" strokeWidth={2} />
                             </View>
 
                             {/* Información */}
@@ -151,67 +166,135 @@ export default function MedicationsListScreen({
                               <Text className="text-gray-900 text-lg font-bold mb-1">
                                 {medication.name}
                               </Text>
-                              <Text className="text-gray-700 text-base mb-1">
-                                💉 {medication.dosage}
-                              </Text>
-                              <Text className="text-gray-600 text-sm mb-1">
-                                🕐 Cada {medication.frequencyHours} horas (
-                                {medication.scheduledTimes.length}x al día)
-                              </Text>
+                              <View className="flex-row items-center mb-1">
+                                <Syringe
+                                  size={14}
+                                  color="#374151"
+                                  strokeWidth={2}
+                                />
+                                <Text className="text-gray-700 text-base ml-1">
+                                  {medication.dosage}
+                                </Text>
+                              </View>
+                              <View className="flex-row items-center mb-1">
+                                <Clock
+                                  size={14}
+                                  color="#4B5563"
+                                  strokeWidth={2}
+                                />
+                                <Text className="text-gray-600 text-sm ml-1">
+                                  Cada {medication.frequencyHours} horas (
+                                  {medication.scheduledTimes.length}x al día)
+                                </Text>
+                              </View>
                               {medication.scheduledTimes &&
                                 medication.scheduledTimes.length > 0 && (
-                                  <Text className="text-blue-600 text-sm mb-1">
-                                    🕒 {medication.scheduledTimes.join(", ")}
-                                  </Text>
+                                  <View className="flex-row items-center mb-1">
+                                    <Clock
+                                      size={14}
+                                      color="#2563eb"
+                                      strokeWidth={2}
+                                    />
+                                    <Text className="text-blue-600 text-sm ml-1">
+                                      {medication.scheduledTimes.join(", ")}
+                                    </Text>
+                                  </View>
                                 )}
                               {isContinuous ? (
-                                <Text className="text-gray-600 text-sm mb-1">
-                                  📅 Desde {formatDate(medication.startDate)} •
-                                  Continuo
-                                </Text>
+                                <View className="flex-row items-center mb-1">
+                                  <Calendar
+                                    size={14}
+                                    color="#4B5563"
+                                    strokeWidth={2}
+                                  />
+                                  <Text className="text-gray-600 text-sm ml-1">
+                                    Desde {formatDate(medication.startDate)} •
+                                    Continuo
+                                  </Text>
+                                </View>
                               ) : (
-                                <Text className="text-gray-600 text-sm mb-1">
-                                  📅 {formatDate(medication.startDate)} -{" "}
-                                  {formatDate(medication.endDate)}
-                                </Text>
+                                <View className="flex-row items-center mb-1">
+                                  <Calendar
+                                    size={14}
+                                    color="#4B5563"
+                                    strokeWidth={2}
+                                  />
+                                  <Text className="text-gray-600 text-sm ml-1">
+                                    {formatDate(medication.startDate)} -{" "}
+                                    {formatDate(medication.endDate)}
+                                  </Text>
+                                </View>
                               )}
                               {!isContinuous && !isExpired && (
-                                <Text
-                                  className={`text-sm font-semibold ${
-                                    isEndingSoon
-                                      ? "text-orange-600"
-                                      : "text-green-600"
-                                  }`}
-                                >
-                                  {daysRemaining === 0
-                                    ? "⚠️ Último día"
-                                    : daysRemaining === 1
-                                    ? "⚠️ 1 día restante"
-                                    : isEndingSoon
-                                    ? `⚠️ ${daysRemaining} días restantes`
-                                    : `✓ ${daysRemaining} días restantes`}
-                                </Text>
+                                <View className="flex-row items-center">
+                                  {isEndingSoon ? (
+                                    <AlertTriangle
+                                      size={14}
+                                      color="#ea580c"
+                                      strokeWidth={2}
+                                    />
+                                  ) : (
+                                    <CheckCircle
+                                      size={14}
+                                      color="#16a34a"
+                                      strokeWidth={2}
+                                    />
+                                  )}
+                                  <Text
+                                    className={`text-sm font-semibold ml-1 ${
+                                      isEndingSoon
+                                        ? "text-orange-600"
+                                        : "text-green-600"
+                                    }`}
+                                  >
+                                    {daysRemaining === 0
+                                      ? "Último día"
+                                      : daysRemaining === 1
+                                      ? "1 día restante"
+                                      : `${daysRemaining} días restantes`}
+                                  </Text>
+                                </View>
                               )}
                               {isContinuous && (
-                                <Text className="text-blue-600 text-sm font-semibold">
-                                  ∞ Tratamiento continuo
-                                </Text>
+                                <View className="flex-row items-center">
+                                  <Infinity
+                                    size={14}
+                                    color="#2563eb"
+                                    strokeWidth={2}
+                                  />
+                                  <Text className="text-blue-600 text-sm font-semibold ml-1">
+                                    Tratamiento continuo
+                                  </Text>
+                                </View>
                               )}
                               {isExpired && (
-                                <Text className="text-red-600 text-sm font-semibold">
-                                  ❌ Tratamiento finalizado
-                                </Text>
+                                <View className="flex-row items-center">
+                                  <X
+                                    size={14}
+                                    color="#dc2626"
+                                    strokeWidth={2}
+                                  />
+                                  <Text className="text-red-600 text-sm font-semibold ml-1">
+                                    Tratamiento finalizado
+                                  </Text>
+                                </View>
                               )}
                               {medication.notificationTime &&
                                 medication.notificationTime !== "none" && (
-                                  <Text className="text-purple-600 text-sm mt-1">
-                                    🔔{" "}
-                                    {
-                                      notificationLabels[
-                                        medication.notificationTime
-                                      ]
-                                    }
-                                  </Text>
+                                  <View className="flex-row items-center mt-1">
+                                    <Bell
+                                      size={14}
+                                      color="#9333ea"
+                                      strokeWidth={2}
+                                    />
+                                    <Text className="text-purple-600 text-sm ml-1">
+                                      {
+                                        notificationLabels[
+                                          medication.notificationTime
+                                        ]
+                                      }
+                                    </Text>
+                                  </View>
                                 )}
                               {medication.notes && (
                                 <Text className="text-gray-500 text-sm mt-2">
@@ -235,28 +318,24 @@ export default function MedicationsListScreen({
 
                           {/* Botones de acción */}
                           <View className="flex-row gap-2">
-                            <TouchableOpacity
-                              onPress={() => onNavigateToAddEdit(medication.id)}
-                              className="flex-1 bg-pink-50 py-3 rounded-xl"
-                            >
-                              <Text className="text-pink-600 text-center font-semibold">
-                                Editar
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() =>
-                                handleDelete(
-                                  medication.id,
-                                  dog.name,
-                                  medication.name
-                                )
-                              }
-                              className="flex-1 bg-red-50 py-3 rounded-xl"
-                            >
-                              <Text className="text-red-600 text-center font-semibold">
-                                Eliminar
-                              </Text>
-                            </TouchableOpacity>
+                            <View className="flex-1">
+                              <EditButton
+                                onPress={() =>
+                                  onNavigateToAddEdit(medication.id)
+                                }
+                              />
+                            </View>
+                            <View className="flex-1">
+                              <DeleteButton
+                                onPress={() =>
+                                  handleDelete(
+                                    medication.id,
+                                    dog.name,
+                                    medication.name
+                                  )
+                                }
+                              />
+                            </View>
                           </View>
                         </View>
                       );

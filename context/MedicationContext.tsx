@@ -32,6 +32,16 @@ export interface Medication {
   notificationIds: string[];
 }
 
+export interface Completion {
+  id: string;
+  userId: string;
+  itemType: "medication" | "exercise" | "appointment";
+  itemId: string;
+  scheduledTime?: string; // HH:mm para medicamentos y ejercicios múltiples
+  completedDate: string;
+  completedAt: Date;
+}
+
 interface MedicationContextType {
   medications: Medication[];
   loading: boolean;
@@ -45,6 +55,14 @@ interface MedicationContextType {
   getMedicationsByDogId: (dogId: string) => Medication[];
   getActiveMedications: () => Medication[];
   toggleMedicationActive: (id: string) => Promise<void>;
+  markMedicationCompleted: (
+    medicationId: string,
+    scheduledTime: string
+  ) => Promise<void>;
+  getTodayCompletions: (
+    medicationId: string,
+    scheduledTime: string
+  ) => Promise<Completion | null>;
 }
 
 const MedicationContext = createContext<MedicationContextType | undefined>(
@@ -105,7 +123,7 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from("medications")
         .select("*, dogs(name)")
-        .order("created_at", { ascending: true });
+        .order("start_time", { ascending: true });
 
       if (error) throw error;
 
@@ -360,6 +378,61 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const markMedicationCompleted = async (
+    medicationId: string,
+    scheduledTime: string
+  ) => {
+    try {
+      if (!user) throw new Error("No user authenticated");
+
+      const { error } = await supabase.from("completions").insert({
+        user_id: user.id,
+        item_type: "medication",
+        item_id: medicationId,
+        scheduled_time: scheduledTime,
+        completed_date: new Date().toISOString().split("T")[0],
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error marking medication completed:", error);
+      throw error;
+    }
+  };
+
+  const getTodayCompletions = async (
+    medicationId: string,
+    scheduledTime: string
+  ): Promise<Completion | null> => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("completions")
+        .select("*")
+        .eq("item_type", "medication")
+        .eq("item_id", medicationId)
+        .eq("scheduled_time", scheduledTime)
+        .eq("completed_date", today)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        userId: data.user_id,
+        itemType: data.item_type,
+        itemId: data.item_id,
+        scheduledTime: data.scheduled_time,
+        completedDate: data.completed_date,
+        completedAt: new Date(data.completed_at),
+      };
+    } catch (error) {
+      console.error("Error getting completions:", error);
+      return null;
+    }
+  };
+
   return (
     <MedicationContext.Provider
       value={{
@@ -372,6 +445,8 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
         getMedicationsByDogId,
         getActiveMedications,
         toggleMedicationActive,
+        markMedicationCompleted,
+        getTodayCompletions,
       }}
     >
       {children}

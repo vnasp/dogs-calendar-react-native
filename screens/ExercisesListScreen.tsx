@@ -12,11 +12,22 @@ import {
   useExercise,
   exerciseTypeLabels,
   exerciseTypeColors,
-  exerciseTypeIcons,
 } from "../context/ExerciseContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
 import HeaderAddButton from "../components/HeaderAddButton";
+import ExerciseIcon from "../components/ExerciseIcon";
+import EditButton from "../components/EditButton";
+import DeleteButton from "../components/DeleteButton";
+import {
+  ChevronLeft,
+  Dog,
+  Dumbbell,
+  Clock,
+  Repeat,
+  Bell,
+  Timer,
+} from "lucide-react-native";
 
 interface ExercisesListScreenProps {
   onNavigateToAddEdit: (exerciseId?: string) => void;
@@ -57,7 +68,7 @@ export default function ExercisesListScreen({
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <Text className="text-white text-2xl">‹</Text>
+            <ChevronLeft size={28} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
           <Text className="text-white text-2xl font-bold flex-1">
             Ejercicios
@@ -71,8 +82,8 @@ export default function ExercisesListScreen({
       <ScrollView className="flex-1 px-6 pt-6">
         {dogs.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">🐕</Text>
-            <Text className="text-gray-500 text-lg text-center mb-2">
+            <Dog size={80} color="#9CA3AF" strokeWidth={1.5} />
+            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
               Primero agrega un perro
             </Text>
             <Text className="text-gray-400 text-sm text-center">
@@ -81,8 +92,8 @@ export default function ExercisesListScreen({
           </View>
         ) : exercises.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">🏃</Text>
-            <Text className="text-gray-500 text-lg text-center mb-2">
+            <Dumbbell size={80} color="#9CA3AF" strokeWidth={1.5} />
+            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
               No hay rutinas de ejercicio
             </Text>
             <Text className="text-gray-400 text-sm text-center">
@@ -96,8 +107,8 @@ export default function ExercisesListScreen({
                 <View key={dog.id}>
                   {/* Nombre del perro */}
                   <View className="flex-row items-center mb-3">
-                    <Text className="text-2xl mr-2">🐕</Text>
-                    <Text className="text-gray-900 text-xl font-bold">
+                    <Dog size={24} color="#1F2937" strokeWidth={2} />
+                    <Text className="text-gray-900 text-xl font-bold ml-2">
                       {dog.name}
                     </Text>
                   </View>
@@ -118,9 +129,12 @@ export default function ExercisesListScreen({
                               exerciseTypeColors[exercise.type]
                             } rounded-xl items-center justify-center mr-3`}
                           >
-                            <Text className="text-2xl">
-                              {exerciseTypeIcons[exercise.type]}
-                            </Text>
+                            <ExerciseIcon
+                              type={exercise.type}
+                              size={24}
+                              color="#1F2937"
+                              strokeWidth={2}
+                            />
                           </View>
 
                           {/* Información */}
@@ -128,30 +142,57 @@ export default function ExercisesListScreen({
                             <Text className="text-gray-900 text-lg font-bold mb-1">
                               {exerciseTypeLabels[exercise.type]}
                             </Text>
-                            <Text className="text-gray-700 text-base mb-1">
-                              ⏱️ {exercise.durationMinutes} minutos
-                            </Text>
-                            <Text className="text-gray-600 text-sm mb-1">
-                              🔄 {exercise.timesPerDay}{" "}
-                              {exercise.timesPerDay === 1 ? "vez" : "veces"} al
-                              día
-                            </Text>
+                            <View className="flex-row items-center mb-1">
+                              <Timer
+                                size={14}
+                                color="#374151"
+                                strokeWidth={2}
+                              />
+                              <Text className="text-gray-700 text-base ml-1">
+                                {exercise.durationMinutes} minutos
+                              </Text>
+                            </View>
+                            <View className="flex-row items-center mb-1">
+                              <Repeat
+                                size={14}
+                                color="#4B5563"
+                                strokeWidth={2}
+                              />
+                              <Text className="text-gray-600 text-sm ml-1">
+                                {exercise.timesPerDay}{" "}
+                                {exercise.timesPerDay === 1 ? "vez" : "veces"}{" "}
+                                al día
+                              </Text>
+                            </View>
                             {exercise.scheduledTimes &&
                               exercise.scheduledTimes.length > 0 && (
-                                <Text className="text-blue-600 text-sm mb-1">
-                                  🕒 {exercise.scheduledTimes.join(", ")}
-                                </Text>
+                                <View className="flex-row items-center mb-1">
+                                  <Clock
+                                    size={14}
+                                    color="#2563eb"
+                                    strokeWidth={2}
+                                  />
+                                  <Text className="text-blue-600 text-sm ml-1">
+                                    {exercise.scheduledTimes.join(", ")}
+                                  </Text>
+                                </View>
                               )}
                             {exercise.notificationTime &&
                               exercise.notificationTime !== "none" && (
-                                <Text className="text-purple-600 text-sm">
-                                  🔔{" "}
-                                  {
-                                    notificationLabels[
-                                      exercise.notificationTime
-                                    ]
-                                  }
-                                </Text>
+                                <View className="flex-row items-center">
+                                  <Bell
+                                    size={14}
+                                    color="#9333ea"
+                                    strokeWidth={2}
+                                  />
+                                  <Text className="text-purple-600 text-sm ml-1">
+                                    {
+                                      notificationLabels[
+                                        exercise.notificationTime
+                                      ]
+                                    }
+                                  </Text>
+                                </View>
                               )}
                             {exercise.notes && (
                               <Text className="text-gray-500 text-sm mt-2">
@@ -175,22 +216,18 @@ export default function ExercisesListScreen({
 
                         {/* Botones de acción */}
                         <View className="flex-row gap-2">
-                          <TouchableOpacity
-                            onPress={() => onNavigateToAddEdit(exercise.id)}
-                            className="flex-1 bg-teal-50 py-3 rounded-xl"
-                          >
-                            <Text className="text-teal-600 text-center font-semibold">
-                              Editar
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => handleDelete(exercise.id, dog.name)}
-                            className="flex-1 bg-red-50 py-3 rounded-xl"
-                          >
-                            <Text className="text-red-600 text-center font-semibold">
-                              Eliminar
-                            </Text>
-                          </TouchableOpacity>
+                          <View className="flex-1">
+                            <EditButton
+                              onPress={() => onNavigateToAddEdit(exercise.id)}
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <DeleteButton
+                              onPress={() =>
+                                handleDelete(exercise.id, dog.name)
+                              }
+                            />
+                          </View>
                         </View>
                       </View>
                     ))}

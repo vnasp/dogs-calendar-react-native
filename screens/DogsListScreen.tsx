@@ -10,6 +10,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDogs } from "../context/DogsContext";
 import HeaderAddButton from "../components/HeaderAddButton";
+import EditButton from "../components/EditButton";
+import DeleteButton from "../components/DeleteButton";
 
 interface DogsListScreenProps {
   onNavigateToAddEdit: (dogId?: string) => void;
@@ -127,30 +129,14 @@ export default function DogsListScreen({
 
                 {/* Botones de acción */}
                 <View className="flex-row gap-2 mt-4">
-                  <TouchableOpacity
-                    onPress={() => onNavigateToMedicalHistory(dog.id)}
-                    className="flex-1 bg-purple-50 py-3 rounded-xl"
-                  >
-                    <Text className="text-purple-600 text-center font-semibold">
-                      🏥 Historial
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => onNavigateToAddEdit(dog.id)}
-                    className="flex-1 bg-blue-50 py-3 rounded-xl"
-                  >
-                    <Text className="text-blue-600 text-center font-semibold">
-                      Editar
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(dog.id, dog.name)}
-                    className="flex-1 bg-red-50 py-3 rounded-xl"
-                  >
-                    <Text className="text-red-600 text-center font-semibold">
-                      Eliminar
-                    </Text>
-                  </TouchableOpacity>
+                  <View className="flex-1">
+                    <EditButton onPress={() => onNavigateToAddEdit(dog.id)} />
+                  </View>
+                  <View className="flex-1">
+                    <DeleteButton
+                      onPress={() => handleDelete(dog.id, dog.name)}
+                    />
+                  </View>
                 </View>
               </View>
             ))}

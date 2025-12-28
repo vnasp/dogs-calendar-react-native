@@ -40,18 +40,17 @@
     "extra": {
       "eas": {
         "projectId": "ced6df7d-ec62-4228-9c55-3934a7d29d5b"
-     ,
+      }
+    },
     "plugins": [
       [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
           "color": "#0EA5E9",
-          "sounds": ["./assets/notification.wav"],
           "mode": "production"
         }
       ]
-    ] }
-    }
+    ]
   }
 }

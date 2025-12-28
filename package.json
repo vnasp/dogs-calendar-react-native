@@ -20,6 +20,7 @@
     "expo-notifications": "^0.32.15",
     "expo-splash-screen": "^31.0.13",
     "expo-status-bar": "~3.0.9",
+    "lucide-react-native": "^0.562.0",
     "nativewind": "^4.2.1",
     "react": "19.1.0",
     "react-native": "0.81.5",

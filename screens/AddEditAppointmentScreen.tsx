@@ -62,7 +62,7 @@ export default function AddEditAppointmentScreen({
     "radiografia",
     "prequirurgico",
     "operacion",
-    "fisiatra",
+    "fisioterapia",
     "vacuna",
     "desparasitacion",
     "otro",

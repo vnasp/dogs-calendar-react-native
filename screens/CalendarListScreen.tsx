@@ -5,11 +5,20 @@ import {
   useCalendar,
   appointmentTypeLabels,
   appointmentTypeColors,
-  appointmentTypeIcons,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
 import HeaderAddButton from "../components/HeaderAddButton";
+import AppointmentIcon from "../components/AppointmentIcon";
+import EditButton from "../components/EditButton";
+import DeleteButton from "../components/DeleteButton";
+import {
+  ChevronLeft,
+  Dog,
+  Calendar as CalendarIcon,
+  Clock,
+  Bell,
+} from "lucide-react-native";
 
 interface CalendarListScreenProps {
   onNavigateToAddEdit: (appointmentId?: string) => void;
@@ -75,7 +84,7 @@ export default function CalendarListScreen({
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <Text className="text-white text-2xl">‹</Text>
+            <ChevronLeft size={28} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
           <Text className="text-white text-2xl font-bold flex-1">
             Calendario
@@ -135,8 +144,8 @@ export default function CalendarListScreen({
       <ScrollView className="flex-1 px-6 pt-6">
         {dogs.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">🐕</Text>
-            <Text className="text-gray-500 text-lg text-center mb-2">
+            <Dog size={80} color="#9CA3AF" strokeWidth={1.5} />
+            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
               Primero agrega un perro
             </Text>
             <Text className="text-gray-400 text-sm text-center">
@@ -145,8 +154,8 @@ export default function CalendarListScreen({
           </View>
         ) : filteredAppointments.length === 0 ? (
           <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">📅</Text>
-            <Text className="text-gray-500 text-lg text-center mb-2">
+            <CalendarIcon size={80} color="#9CA3AF" strokeWidth={1.5} />
+            <Text className="text-gray-500 text-lg text-center mb-2 mt-4">
               No hay citas{" "}
               {filter === "upcoming"
                 ? "próximas"
@@ -172,9 +181,12 @@ export default function CalendarListScreen({
                       appointmentTypeColors[appointment.type]
                     } rounded-xl items-center justify-center mr-3`}
                   >
-                    <Text className="text-2xl">
-                      {appointmentTypeIcons[appointment.type]}
-                    </Text>
+                    <AppointmentIcon
+                      type={appointment.type}
+                      size={24}
+                      color="#1F2937"
+                      strokeWidth={2}
+                    />
                   </View>
 
                   {/* Información */}
@@ -182,22 +194,38 @@ export default function CalendarListScreen({
                     <Text className="text-gray-900 text-lg font-bold mb-1">
                       {appointmentTypeLabels[appointment.type]}
                     </Text>
-                    <Text className="text-gray-700 text-base mb-1">
-                      🐕 {appointment.dogName}
-                    </Text>
+                    <View className="flex-row items-center mb-1">
+                      <Dog size={14} color="#374151" strokeWidth={2} />
+                      <Text className="text-gray-700 text-base ml-1">
+                        {appointment.dogName}
+                      </Text>
+                    </View>
                     <View className="flex-row items-center gap-3 mb-1">
-                      <Text className="text-gray-600 text-sm">
-                        📅 {formatDate(appointment.date)}
-                      </Text>
-                      <Text className="text-gray-600 text-sm">
-                        🕐 {appointment.time}
-                      </Text>
+                      <View className="flex-row items-center">
+                        <CalendarIcon
+                          size={14}
+                          color="#4B5563"
+                          strokeWidth={2}
+                        />
+                        <Text className="text-gray-600 text-sm ml-1">
+                          {formatDate(appointment.date)}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Clock size={14} color="#4B5563" strokeWidth={2} />
+                        <Text className="text-gray-600 text-sm ml-1">
+                          {appointment.time}
+                        </Text>
+                      </View>
                     </View>
                     {appointment.notificationTime &&
                       appointment.notificationTime !== "none" && (
-                        <Text className="text-blue-600 text-sm mt-1">
-                          🔔 {notificationLabels[appointment.notificationTime]}
-                        </Text>
+                        <View className="flex-row items-center mt-1">
+                          <Bell size={14} color="#2563eb" strokeWidth={2} />
+                          <Text className="text-blue-600 text-sm ml-1">
+                            {notificationLabels[appointment.notificationTime]}
+                          </Text>
+                        </View>
                       )}
                     {appointment.notes && (
                       <Text className="text-gray-500 text-sm mt-1">
@@ -209,22 +237,16 @@ export default function CalendarListScreen({
 
                 {/* Botones de acción */}
                 <View className="flex-row gap-2">
-                  <TouchableOpacity
-                    onPress={() => onNavigateToAddEdit(appointment.id)}
-                    className="flex-1 bg-green-50 py-3 rounded-xl"
-                  >
-                    <Text className="text-green-600 text-center font-semibold">
-                      Editar
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(appointment.id)}
-                    className="flex-1 bg-red-50 py-3 rounded-xl"
-                  >
-                    <Text className="text-red-600 text-center font-semibold">
-                      Eliminar
-                    </Text>
-                  </TouchableOpacity>
+                  <View className="flex-1">
+                    <EditButton
+                      onPress={() => onNavigateToAddEdit(appointment.id)}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <DeleteButton
+                      onPress={() => handleDelete(appointment.id)}
+                    />
+                  </View>
                 </View>
               </View>
             ))}

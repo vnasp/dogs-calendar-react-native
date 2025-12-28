@@ -222,7 +222,7 @@ function MainApp() {
                     onNavigateToExercises={navigateToExercises}
                   />
                 )}
-                <StatusBar style="light" />
+                <StatusBar style="light" backgroundColor="#0891b2" />
               </SharedAccessProvider>
             </MedicationProvider>
           </ExerciseProvider>

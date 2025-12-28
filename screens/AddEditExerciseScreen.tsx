@@ -6,14 +6,15 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   useExercise,
   ExerciseType,
   exerciseTypeLabels,
   exerciseTypeColors,
-  exerciseTypeIcons,
   calculateScheduledTimes,
 } from "../context/ExerciseContext";
 import { useDogs } from "../context/DogsContext";
@@ -21,6 +22,8 @@ import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
 import PrimaryButton from "../components/PrimaryButton";
+import ExerciseIcon from "../components/ExerciseIcon";
+import { Dog, Clock, ChevronLeft } from "lucide-react-native";
 
 interface AddEditExerciseScreenProps {
   exerciseId?: string;
@@ -52,6 +55,18 @@ export default function AddEditExerciseScreen({
     existingExercise?.startTime || "07:00"
   );
   const [endTime, setEndTime] = useState(existingExercise?.endTime || "21:00");
+  const [startDate, setStartDate] = useState(
+    existingExercise?.startDate
+      ? new Date(existingExercise.startDate)
+      : new Date()
+  );
+  const [isPermanent, setIsPermanent] = useState(
+    existingExercise?.isPermanent ?? true
+  );
+  const [durationWeeks, setDurationWeeks] = useState(
+    existingExercise?.durationWeeks?.toString() || "4"
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [notes, setNotes] = useState(existingExercise?.notes || "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
     existingExercise?.notificationTime || "15min"
@@ -97,6 +112,19 @@ export default function AddEditExerciseScreen({
       return;
     }
 
+    const weeks = parseInt(durationWeeks);
+    if (!isPermanent && (isNaN(weeks) || weeks <= 0)) {
+      Alert.alert("Error", "Por favor ingresa una duración válida en semanas");
+      return;
+    }
+
+    // Calcular fecha de fin si no es permanente
+    let endDate: Date | undefined;
+    if (!isPermanent) {
+      endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + weeks * 7);
+    }
+
     const selectedDog = dogs.find((dog) => dog.id === selectedDogId);
     if (!selectedDog) {
       Alert.alert("Error", "Perro no encontrado");
@@ -112,6 +140,10 @@ export default function AddEditExerciseScreen({
       startTime,
       endTime,
       scheduledTimes,
+      startDate,
+      isPermanent,
+      durationWeeks: isPermanent ? undefined : weeks,
+      endDate,
       notes: notes.trim(),
       isActive: existingExercise?.isActive ?? true,
       notificationTime,
@@ -138,7 +170,7 @@ export default function AddEditExerciseScreen({
       <View className="bg-cyan-600 pt-6 pb-6 px-6">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <Text className="text-white text-2xl">‹</Text>
+            <ChevronLeft size={28} color="white" strokeWidth={2.5} />
           </TouchableOpacity>
           <Text className="text-white text-2xl font-bold flex-1">
             {isEditing ? "Editar Rutina" : "Nueva Rutina"}
@@ -161,7 +193,12 @@ export default function AddEditExerciseScreen({
                     : "bg-white"
                 }`}
               >
-                <Text className="text-2xl mr-3">🐕</Text>
+                <Dog
+                  size={24}
+                  color={selectedDogId === dog.id ? "#0f766e" : "#374151"}
+                  strokeWidth={2}
+                  className="mr-3"
+                />
                 <Text
                   className={`text-lg font-semibold ${
                     selectedDogId === dog.id ? "text-teal-700" : "text-gray-900"
@@ -191,11 +228,14 @@ export default function AddEditExerciseScreen({
                     : "bg-white"
                 }`}
               >
-                <Text className="text-xl mr-2">
-                  {exerciseTypeIcons[exerciseType]}
-                </Text>
+                <ExerciseIcon
+                  type={exerciseType}
+                  size={20}
+                  color={type === exerciseType ? "#1F2937" : "#4B5563"}
+                  strokeWidth={type === exerciseType ? 2.5 : 2}
+                />
                 <Text
-                  className={`font-semibold ${
+                  className={`font-semibold ml-2 ${
                     type === exerciseType ? "text-gray-900" : "text-gray-700"
                   }`}
                 >
@@ -313,12 +353,98 @@ export default function AddEditExerciseScreen({
           </View>
         </View>
 
+        {/* Fecha de inicio */}
+        <View className="mb-4">
+          <Text className="text-gray-700 font-semibold mb-2">
+            Fecha de inicio *
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            className="bg-white px-4 py-3 rounded-xl"
+          >
+            <Text className="text-gray-900">
+              {startDate.toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={startDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === "ios");
+                if (selectedDate) {
+                  setStartDate(selectedDate);
+                }
+              }}
+            />
+          )}
+        </View>
+
+        {/* Duración del tratamiento */}
+        <View className="mb-4">
+          <Text className="text-gray-700 font-semibold mb-2">
+            Duración del tratamiento
+          </Text>
+          {/* Toggle permanente */}
+          <TouchableOpacity
+            onPress={() => setIsPermanent(!isPermanent)}
+            className="bg-white px-4 py-3 rounded-xl mb-3 flex-row items-center justify-between"
+          >
+            <Text className="text-gray-900">Rutina permanente (sin fin)</Text>
+            <View
+              className={`w-12 h-6 rounded-full ${
+                isPermanent ? "bg-teal-500" : "bg-gray-300"
+              } flex-row ${isPermanent ? "justify-end" : "justify-start"} px-1`}
+            >
+              <View className="w-4 h-4 bg-white rounded-full self-center" />
+            </View>
+          </TouchableOpacity>
+
+          {!isPermanent && (
+            <View>
+              <Text className="text-gray-600 text-sm mb-2">
+                Duración en semanas *
+              </Text>
+              <TextInput
+                value={durationWeeks}
+                onChangeText={setDurationWeeks}
+                keyboardType="numeric"
+                placeholder="Ej: 4"
+                className="bg-white px-4 py-3 rounded-xl text-gray-900"
+                placeholderTextColor="#9CA3AF"
+              />
+              {!isNaN(parseInt(durationWeeks)) &&
+                parseInt(durationWeeks) > 0 && (
+                  <Text className="text-gray-500 text-sm mt-2">
+                    Finalizará el{" "}
+                    {new Date(
+                      new Date(startDate).getTime() +
+                        parseInt(durationWeeks) * 7 * 24 * 60 * 60 * 1000
+                    ).toLocaleDateString("es-ES", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </Text>
+                )}
+            </View>
+          )}
+        </View>
+
         {/* Horarios calculados */}
         {scheduledTimes.length > 0 && (
           <View className="mb-4 bg-blue-50 p-4 rounded-xl">
-            <Text className="text-gray-700 font-semibold mb-2">
-              🕒 Horarios programados
-            </Text>
+            <View className="flex-row items-center mb-2">
+              <Clock size={20} color="#374151" strokeWidth={2} />
+              <Text className="text-gray-700 font-semibold ml-2">
+                Horarios programados
+              </Text>
+            </View>
             <View className="flex-row flex-wrap gap-2">
               {scheduledTimes.map((time, index) => (
                 <View key={index} className="bg-white px-4 py-2 rounded-lg">

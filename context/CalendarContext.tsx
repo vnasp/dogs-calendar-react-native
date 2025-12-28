@@ -8,6 +8,7 @@ import React, {
 import { supabase } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
+import { Completion } from "./MedicationContext";
 import {
   scheduleAppointmentNotification,
   cancelAppointmentNotifications,
@@ -19,7 +20,7 @@ export type AppointmentType =
   | "radiografia"
   | "prequirurgico"
   | "operacion"
-  | "fisiatra"
+  | "fisioterapia"
   | "vacuna"
   | "desparasitacion"
   | "otro";
@@ -48,6 +49,14 @@ interface CalendarContextType {
   getAppointmentById: (id: string) => Appointment | undefined;
   getAppointmentsByDogId: (dogId: string) => Appointment[];
   getUpcomingAppointments: () => Appointment[];
+  markAppointmentCompleted: (
+    appointmentId: string,
+    scheduledTime: string
+  ) => Promise<void>;
+  getTodayCompletions: (
+    appointmentId: string,
+    scheduledTime: string
+  ) => Promise<Completion | null>;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(
@@ -269,6 +278,68 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
 
+  const markAppointmentCompleted = async (
+    appointmentId: string,
+    scheduledTime: string
+  ) => {
+    try {
+      if (!user) throw new Error("No user authenticated");
+
+      const { error } = await supabase.from("completions").insert({
+        user_id: user.id,
+        item_type: "appointment",
+        item_id: appointmentId,
+        scheduled_time: scheduledTime || null,
+        completed_date: new Date().toISOString().split("T")[0],
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error marking appointment completed:", error);
+      throw error;
+    }
+  };
+
+  const getTodayCompletions = async (
+    appointmentId: string,
+    scheduledTime: string
+  ): Promise<Completion | null> => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const query = supabase
+        .from("completions")
+        .select("*")
+        .eq("item_type", "appointment")
+        .eq("item_id", appointmentId)
+        .eq("completed_date", today);
+
+      // Para appointments, scheduled_time puede ser null
+      if (scheduledTime) {
+        query.eq("scheduled_time", scheduledTime);
+      } else {
+        query.is("scheduled_time", null);
+      }
+
+      const { data, error } = await query.single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        userId: data.user_id,
+        itemType: data.item_type,
+        itemId: data.item_id,
+        scheduledTime: data.scheduled_time,
+        completedDate: data.completed_date,
+        completedAt: new Date(data.completed_at),
+      };
+    } catch (error) {
+      console.error("Error getting completions:", error);
+      return null;
+    }
+  };
+
   return (
     <CalendarContext.Provider
       value={{
@@ -280,6 +351,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         getAppointmentById,
         getAppointmentsByDogId,
         getUpcomingAppointments,
+        markAppointmentCompleted,
+        getTodayCompletions,
       }}
     >
       {children}
@@ -300,7 +373,7 @@ export const appointmentTypeLabels: Record<AppointmentType, string> = {
   radiografia: "Radiografía",
   prequirurgico: "Prequirúrgico",
   operacion: "Operación",
-  fisiatra: "Fisiatra",
+  fisioterapia: "Fisioterapia",
   vacuna: "Vacuna",
   desparasitacion: "Desparasitación",
   otro: "Otro",
@@ -311,19 +384,8 @@ export const appointmentTypeColors: Record<AppointmentType, string> = {
   radiografia: "bg-purple-100",
   prequirurgico: "bg-orange-100",
   operacion: "bg-red-100",
-  fisiatra: "bg-green-100",
+  fisioterapia: "bg-green-100",
   vacuna: "bg-pink-100",
   desparasitacion: "bg-yellow-100",
   otro: "bg-gray-100",
-};
-
-export const appointmentTypeIcons: Record<AppointmentType, string> = {
-  control: "🏥",
-  radiografia: "📸",
-  prequirurgico: "📋",
-  operacion: "⚕️",
-  fisiatra: "💪",
-  vacuna: "💉",
-  desparasitacion: "💊",
-  otro: "📌",
 };

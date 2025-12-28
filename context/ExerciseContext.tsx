@@ -8,6 +8,7 @@ import React, {
 import { supabase } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
+import { Completion } from "./MedicationContext";
 import {
   scheduleExerciseNotifications,
   cancelExerciseNotifications,
@@ -33,6 +34,10 @@ export interface Exercise {
   startTime: string; // HH:mm formato 24h
   endTime: string; // HH:mm formato 24h
   scheduledTimes: string[]; // Array de horarios calculados en formato HH:mm
+  startDate: Date; // Fecha de inicio del tratamiento
+  isPermanent: boolean; // Si es permanente o tiene duración limitada
+  durationWeeks?: number; // Duración en semanas (solo si no es permanente)
+  endDate?: Date; // Fecha de fin (calculada)
   notes?: string;
   isActive: boolean;
   notificationTime: NotificationTime;
@@ -48,6 +53,14 @@ interface ExerciseContextType {
   getExerciseById: (id: string) => Exercise | undefined;
   getExercisesByDogId: (dogId: string) => Exercise[];
   toggleExerciseActive: (id: string) => Promise<void>;
+  markExerciseCompleted: (
+    exerciseId: string,
+    scheduledTime: string
+  ) => Promise<void>;
+  getTodayCompletions: (
+    exerciseId: string,
+    scheduledTime: string
+  ) => Promise<Completion | null>;
 }
 
 const ExerciseContext = createContext<ExerciseContextType | undefined>(
@@ -118,7 +131,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from("exercises")
         .select("*, dogs(name)")
-        .order("created_at", { ascending: true });
+        .order("start_time", { ascending: true });
 
       if (error) throw error;
 
@@ -134,6 +147,10 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
             startTime: ex.start_time,
             endTime: ex.end_time,
             scheduledTimes: ex.scheduled_times || [],
+            startDate: new Date(ex.start_date),
+            isPermanent: ex.is_permanent,
+            durationWeeks: ex.duration_weeks,
+            endDate: ex.end_date ? new Date(ex.end_date) : undefined,
             notes: ex.notes,
             isActive: ex.is_active,
             notificationTime: ex.notification_time as NotificationTime,
@@ -176,11 +193,18 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
           user_id: user.id,
           dog_id: exercise.dogId,
           type: exercise.type,
+          title: exerciseTypeLabels[exercise.type],
           duration_minutes: exercise.durationMinutes,
           times_per_day: exercise.timesPerDay,
           start_time: exercise.startTime,
           end_time: exercise.endTime,
           scheduled_times: exercise.scheduledTimes,
+          start_date: exercise.startDate.toISOString().split("T")[0],
+          is_permanent: exercise.isPermanent,
+          duration_weeks: exercise.durationWeeks,
+          end_date: exercise.endDate
+            ? exercise.endDate.toISOString().split("T")[0]
+            : null,
           notes: exercise.notes,
           is_active: exercise.isActive,
           notification_time: exercise.notificationTime,
@@ -200,6 +224,10 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
         startTime: data.start_time,
         endTime: data.end_time,
         scheduledTimes: data.scheduled_times || [],
+        startDate: new Date(data.start_date),
+        isPermanent: data.is_permanent,
+        durationWeeks: data.duration_weeks,
+        endDate: data.end_date ? new Date(data.end_date) : undefined,
         notes: data.notes,
         isActive: data.is_active,
         notificationTime: data.notification_time as NotificationTime,
@@ -247,11 +275,18 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
         .update({
           dog_id: updatedExercise.dogId,
           type: updatedExercise.type,
+          title: exerciseTypeLabels[updatedExercise.type],
           duration_minutes: updatedExercise.durationMinutes,
           times_per_day: updatedExercise.timesPerDay,
           start_time: updatedExercise.startTime,
           end_time: updatedExercise.endTime,
           scheduled_times: updatedExercise.scheduledTimes,
+          start_date: updatedExercise.startDate.toISOString().split("T")[0],
+          is_permanent: updatedExercise.isPermanent,
+          duration_weeks: updatedExercise.durationWeeks,
+          end_date: updatedExercise.endDate
+            ? updatedExercise.endDate.toISOString().split("T")[0]
+            : null,
           notes: updatedExercise.notes,
           is_active: updatedExercise.isActive,
           notification_time: updatedExercise.notificationTime,
@@ -343,6 +378,61 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const markExerciseCompleted = async (
+    exerciseId: string,
+    scheduledTime: string
+  ) => {
+    try {
+      if (!user) throw new Error("No user authenticated");
+
+      const { error } = await supabase.from("completions").insert({
+        user_id: user.id,
+        item_type: "exercise",
+        item_id: exerciseId,
+        scheduled_time: scheduledTime,
+        completed_date: new Date().toISOString().split("T")[0],
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error marking exercise completed:", error);
+      throw error;
+    }
+  };
+
+  const getTodayCompletions = async (
+    exerciseId: string,
+    scheduledTime: string
+  ): Promise<Completion | null> => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("completions")
+        .select("*")
+        .eq("item_type", "exercise")
+        .eq("item_id", exerciseId)
+        .eq("scheduled_time", scheduledTime)
+        .eq("completed_date", today)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        userId: data.user_id,
+        itemType: data.item_type,
+        itemId: data.item_id,
+        scheduledTime: data.scheduled_time,
+        completedDate: data.completed_date,
+        completedAt: new Date(data.completed_at),
+      };
+    } catch (error) {
+      console.error("Error getting completions:", error);
+      return null;
+    }
+  };
+
   return (
     <ExerciseContext.Provider
       value={{
@@ -354,6 +444,8 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
         getExerciseById,
         getExercisesByDogId,
         toggleExerciseActive,
+        markExerciseCompleted,
+        getTodayCompletions,
       }}
     >
       {children}
@@ -377,16 +469,6 @@ export const exerciseTypeLabels: Record<ExerciseType, string> = {
   juego: "Juego",
   fisioterapia: "Fisioterapia",
   otro: "Otro",
-};
-
-export const exerciseTypeIcons: Record<ExerciseType, string> = {
-  caminata: "🚶",
-  cavaletti: "🏃",
-  natacion: "🏊",
-  carrera: "🏃‍♂️",
-  juego: "🎾",
-  fisioterapia: "💪",
-  otro: "🔹",
 };
 
 export const exerciseTypeColors: Record<ExerciseType, string> = {
