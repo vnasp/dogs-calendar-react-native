@@ -1,7 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useState, useEffect } from "react";
-import LoadingScreen from "./screens/LoadingScreen";
+import * as SplashScreen from "expo-splash-screen";
+
+// Mantener el splash nativo visible hasta que la app esté lista
+SplashScreen.preventAutoHideAsync();
+
 import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
 import DogsListScreen from "./screens/DogsListScreen";
@@ -13,16 +17,17 @@ import AddEditExerciseScreen from "./screens/AddEditExerciseScreen";
 import MedicationsListScreen from "./screens/MedicationsListScreen";
 import AddEditMedicationScreen from "./screens/AddEditMedicationScreen";
 import MedicalHistoryScreen from "./screens/MedicalHistoryScreen";
+import SharedAccessScreen from "./screens/SharedAccessScreen";
 import Footer from "./components/Footer";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DogsProvider } from "./context/DogsContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ExerciseProvider } from "./context/ExerciseContext";
 import { MedicationProvider } from "./context/MedicationContext";
+import { SharedAccessProvider } from "./context/SharedAccessContext";
 import "./global.css";
 
 type Screen =
-  | "loading"
   | "login"
   | "home"
   | "dogsList"
@@ -33,10 +38,11 @@ type Screen =
   | "addEditExercise"
   | "medications"
   | "addEditMedication"
-  | "medicalHistory";
+  | "medicalHistory"
+  | "sharedAccess";
 
 function MainApp() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>("loading");
+  const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [editingDogId, setEditingDogId] = useState<string | undefined>();
   const [editingAppointmentId, setEditingAppointmentId] = useState<
     string | undefined
@@ -57,6 +63,8 @@ function MainApp() {
       } else {
         setCurrentScreen("login");
       }
+      // Ocultar el splash nativo cuando la autenticación esté lista
+      SplashScreen.hideAsync();
     }
   }, [user, authLoading]);
 
@@ -88,11 +96,13 @@ function MainApp() {
     setCurrentScreen("medicalHistory");
   };
 
-  const renderScreen = () => {
-    if (authLoading || currentScreen === "loading") {
-      return <LoadingScreen />;
-    }
+  const navigateToSharedAccess = () => setCurrentScreen("sharedAccess");
 
+  const renderScreen = () => {
+    if (authLoading) {
+      // Mientras carga, no renderizar nada (el splash nativo se mantiene visible)
+      return null;
+    }
     if (!user) {
       return <LoginScreen />;
     }
@@ -105,6 +115,7 @@ function MainApp() {
             onNavigateToCalendar={navigateToCalendar}
             onNavigateToExercises={navigateToExercises}
             onNavigateToMedications={navigateToMedications}
+            onNavigateToSharedAccess={navigateToSharedAccess}
           />
         );
       case "dogsList":
@@ -171,6 +182,15 @@ function MainApp() {
             onNavigateBack={navigateToDogsList}
           />
         );
+      case "sharedAccess":
+        return (
+          <SharedAccessScreen
+            navigation={{
+              navigate: navigateToHome,
+              goBack: navigateToHome,
+            }}
+          />
+        );
       default:
         return (
           <HomeScreen
@@ -178,6 +198,7 @@ function MainApp() {
             onNavigateToCalendar={navigateToCalendar}
             onNavigateToExercises={navigateToExercises}
             onNavigateToMedications={navigateToMedications}
+            onNavigateToSharedAccess={navigateToSharedAccess}
           />
         );
     }
@@ -189,18 +210,20 @@ function MainApp() {
         <CalendarProvider>
           <ExerciseProvider>
             <MedicationProvider>
-              {renderScreen()}
-              {user && (
-                <Footer
-                  currentScreen={currentScreen}
-                  onNavigateToHome={navigateToHome}
-                  onNavigateToDogsList={navigateToDogsList}
-                  onNavigateToCalendar={navigateToCalendar}
-                  onNavigateToMedications={navigateToMedications}
-                  onNavigateToExercises={navigateToExercises}
-                />
-              )}
-              <StatusBar style="light" />
+              <SharedAccessProvider>
+                {renderScreen()}
+                {user && (
+                  <Footer
+                    currentScreen={currentScreen}
+                    onNavigateToHome={navigateToHome}
+                    onNavigateToDogsList={navigateToDogsList}
+                    onNavigateToCalendar={navigateToCalendar}
+                    onNavigateToMedications={navigateToMedications}
+                    onNavigateToExercises={navigateToExercises}
+                  />
+                )}
+                <StatusBar style="light" />
+              </SharedAccessProvider>
             </MedicationProvider>
           </ExerciseProvider>
         </CalendarProvider>

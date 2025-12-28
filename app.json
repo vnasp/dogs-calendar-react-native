@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0EA5E9"
     },
     "ios": {
       "supportsTablet": true,
@@ -30,7 +30,8 @@
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "SCHEDULE_EXACT_ALARM"
+        "SCHEDULE_EXACT_ALARM",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -38,8 +39,19 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
-      }
+        "projectId": "ced6df7d-ec62-4228-9c55-3934a7d29d5b"
+     ,
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0EA5E9",
+          "sounds": ["./assets/notification.wav"],
+          "mode": "production"
+        }
+      ]
+    ] }
     }
   }
 }

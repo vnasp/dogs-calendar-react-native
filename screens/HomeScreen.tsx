@@ -10,6 +10,7 @@ interface HomeScreenProps {
   onNavigateToCalendar: () => void;
   onNavigateToExercises: () => void;
   onNavigateToMedications: () => void;
+  onNavigateToSharedAccess: () => void;
 }
 
 export default function HomeScreen({
@@ -17,6 +18,7 @@ export default function HomeScreen({
   onNavigateToCalendar,
   onNavigateToExercises,
   onNavigateToMedications,
+  onNavigateToSharedAccess,
 }: HomeScreenProps) {
   const { appointments } = useCalendar();
   const { medications } = useMedication();
@@ -67,9 +69,12 @@ export default function HomeScreen({
                 Gestiona la salud de tus perritos
               </Text>
             </View>
-            {/* Icono de notificaciones */}
-            <TouchableOpacity className="w-12 h-12 bg-cyan-700 rounded-full items-center justify-center">
-              <Text className="text-2xl">🔔</Text>
+            {/* Icono de acceso compartido */}
+            <TouchableOpacity
+              onPress={onNavigateToSharedAccess}
+              className="w-12 h-12 bg-cyan-700 rounded-full items-center justify-center"
+            >
+              <Text className="text-2xl">👥</Text>
             </TouchableOpacity>
           </View>
         </View>
