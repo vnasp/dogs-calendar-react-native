@@ -104,7 +104,7 @@ export async function scheduleAppointmentNotification(
         sound: true,
       },
       trigger: {
-        type: "date" as const,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: notificationDate,
       },
     });
@@ -183,7 +183,7 @@ export async function scheduleExerciseNotifications(
           sound: true,
         },
         trigger: {
-          type: "calendar" as const,
+          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
           hour: notificationDate.getHours(),
           minute: notificationDate.getMinutes(),
           repeats: true, // Repetir diariamente
@@ -269,7 +269,7 @@ export async function scheduleMedicationNotifications(
               sound: true,
             },
             trigger: {
-              type: "date" as const,
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
               date: notificationDate,
             },
           });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCalendar, appointmentTypeLabels } from "../context/CalendarContext";
 import { useMedication, Completion } from "../context/MedicationContext";
@@ -7,6 +7,7 @@ import { useExercise, exerciseTypeLabels } from "../context/ExerciseContext";
 import SwipeableCard from "../components/SwipeableCard";
 import ExerciseIcon from "../components/ExerciseIcon";
 import Logo from "../components/Logo";
+import * as Notifications from "expo-notifications";
 import {
   Calendar,
   Pill,
@@ -14,6 +15,7 @@ import {
   Share2,
   Dumbbell,
   Sparkles,
+  Bell,
 } from "lucide-react-native";
 
 interface HomeScreenProps {
@@ -247,6 +249,52 @@ export default function HomeScreen({
     return `En ${diffDays} días`;
   };
 
+  const testNotification = async () => {
+    try {
+      console.log("🔔 Probando notificaciones...");
+      
+      const { status } = await Notifications.requestPermissionsAsync();
+      console.log("📱 Estado de permisos:", status);
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos denegados",
+          "Ve a Configuración → PewosApp → Notificaciones y actívalas"
+        );
+        return;
+      }
+
+      console.log("📤 Programando notificación...");
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "🐕 Prueba de Notificación",
+          body: "¡Las notificaciones funcionan correctamente!",
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 5,
+        },
+      });
+
+      console.log("✅ Notificación programada con ID:", notificationId);
+
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      console.log("📋 Total de notificaciones programadas:", scheduled.length);
+
+      Alert.alert(
+        "✅ Notificación programada",
+        `Llegará en 5 segundos.\n\nTotal programadas: ${scheduled.length}`
+      );
+    } catch (error) {
+      console.error("❌ Error completo:", error);
+      Alert.alert(
+        "Error", 
+        `No se pudo programar la notificación.\n\n${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  };
+
   return (
     <SafeAreaView
       className="flex-1 bg-cyan-600"
@@ -261,17 +309,30 @@ export default function HomeScreen({
         <View className="bg-cyan-600 pt-6 pb-6 px-6">
           <View className="flex-row items-center justify-between">
             <Logo />
-            <TouchableOpacity
-              onPress={onNavigateToSharedAccess}
-              className="w-12 h-12 bg-cyan-700 rounded-xl items-center justify-center"
-            >
-              <UserPlus
-                size={24}
-                color="white"
-                strokeWidth={2.5}
-                pointerEvents="none"
-              />
-            </TouchableOpacity>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={testNotification}
+                className="w-12 h-12 bg-cyan-700 rounded-xl items-center justify-center"
+              >
+                <Bell
+                  size={24}
+                  color="white"
+                  strokeWidth={2.5}
+                  pointerEvents="none"
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onNavigateToSharedAccess}
+                className="w-12 h-12 bg-cyan-700 rounded-xl items-center justify-center"
+              >
+                <UserPlus
+                  size={24}
+                  color="white"
+                  strokeWidth={2.5}
+                  pointerEvents="none"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
