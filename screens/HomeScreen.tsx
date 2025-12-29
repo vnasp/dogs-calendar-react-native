@@ -64,7 +64,12 @@ export default function HomeScreen({
   const todayAppointments = useMemo(() => {
     return appointments
       .filter((apt) => {
-        const aptDate = new Date(apt.date);
+        // Crear una nueva instancia de la fecha para no mutar el original
+        const aptDate = new Date(
+          apt.date.getFullYear(),
+          apt.date.getMonth(),
+          apt.date.getDate()
+        );
         aptDate.setHours(0, 0, 0, 0);
         return aptDate.getTime() === today;
       })
@@ -252,7 +257,7 @@ export default function HomeScreen({
   const testNotification = async () => {
     try {
       console.log("🔔 Probando notificaciones...");
-      
+
       const { status } = await Notifications.requestPermissionsAsync();
       console.log("📱 Estado de permisos:", status);
 
@@ -289,8 +294,10 @@ export default function HomeScreen({
     } catch (error) {
       console.error("❌ Error completo:", error);
       Alert.alert(
-        "Error", 
-        `No se pudo programar la notificación.\n\n${error instanceof Error ? error.message : String(error)}`
+        "Error",
+        `No se pudo programar la notificación.\n\n${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
   };

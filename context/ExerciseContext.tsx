@@ -129,9 +129,45 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
   const loadExercises = async () => {
     try {
       setLoading(true);
+
+      if (!user) {
+        setExercises([]);
+        return;
+      }
+
+      // Obtener IDs de usuarios que han compartido acceso conmigo
+      const { data: sharedAccess, error: sharedError } = await supabase
+        .from("shared_access")
+        .select("owner_id")
+        .eq("shared_with_email", user.email)
+        .eq("status", "accepted");
+
+      if (sharedError) throw sharedError;
+
+      const sharedOwnerIds = (sharedAccess || []).map((s: any) => s.owner_id);
+      const allUserIds = [user.id, ...sharedOwnerIds];
+
+      // Obtener IDs de perros de todos los usuarios con acceso
+      const { data: dogsData, error: dogsError } = await supabase
+        .from("dogs")
+        .select("id")
+        .in("user_id", allUserIds);
+
+      if (dogsError) throw dogsError;
+
+      const dogIds = (dogsData || []).map((d: any) => d.id);
+
+      if (dogIds.length === 0) {
+        setExercises([]);
+        setLoading(false);
+        return;
+      }
+
+      // Obtener ejercicios de esos perros
       const { data, error } = await supabase
         .from("exercises")
         .select("*, dogs(name)")
+        .in("dog_id", dogIds)
         .order("start_time", { ascending: true });
 
       if (error) throw error;

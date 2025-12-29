@@ -121,15 +121,66 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
   const loadMedications = async () => {
     try {
       setLoading(true);
+
+      if (!user) {
+        setMedications([]);
+        return;
+      }
+
+      // Obtener IDs de usuarios que han compartido acceso conmigo
+      const { data: sharedAccess, error: sharedError } = await supabase
+        .from("shared_access")
+        .select("owner_id")
+        .eq("shared_with_email", user.email)
+        .eq("status", "accepted");
+
+      if (sharedError) throw sharedError;
+
+      const sharedOwnerIds = (sharedAccess || []).map((s: any) => s.owner_id);
+      const allUserIds = [user.id, ...sharedOwnerIds];
+
+      // Obtener IDs de perros de todos los usuarios con acceso
+      const { data: dogsData, error: dogsError } = await supabase
+        .from("dogs")
+        .select("id")
+        .in("user_id", allUserIds);
+
+      if (dogsError) throw dogsError;
+
+      const dogIds = (dogsData || []).map((d: any) => d.id);
+
+      if (dogIds.length === 0) {
+        setMedications([]);
+        setLoading(false);
+        return;
+      }
+
+      // Obtener medicamentos de esos perros
       const { data, error } = await supabase
         .from("medications")
         .select("*, dogs(name)")
+        .in("dog_id", dogIds)
         .order("start_time", { ascending: true });
 
       if (error) throw error;
 
       const medicationsWithDates = await Promise.all(
         (data || []).map(async (med: any) => {
+          // Parsear fechas en la zona horaria local
+          const startDateParts = med.start_date.split('-');
+          const startDate = new Date(
+            parseInt(startDateParts[0]),
+            parseInt(startDateParts[1]) - 1,
+            parseInt(startDateParts[2])
+          );
+
+          const endDateParts = med.end_date.split('-');
+          const endDate = new Date(
+            parseInt(endDateParts[0]),
+            parseInt(endDateParts[1]) - 1,
+            parseInt(endDateParts[2])
+          );
+
           const medication: Medication = {
             id: med.id,
             dogId: med.dog_id,
@@ -138,10 +189,10 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
             dosage: med.dosage,
             frequencyHours: med.frequency_hours,
             durationDays: med.duration_days,
-            startDate: new Date(med.start_date),
+            startDate: startDate,
             startTime: med.start_time,
             scheduledTimes: med.times || [],
-            endDate: new Date(med.end_date),
+            endDate: endDate,
             notes: med.notes,
             isActive: med.is_active,
             notificationTime: med.notification_time as NotificationTime,
@@ -149,7 +200,12 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
           };
 
           // Reprogramar notificaciones para medicamentos activos
-          if (medication.isActive && medication.endDate > new Date()) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const endDateOnly = new Date(endDate);
+          endDateOnly.setHours(0, 0, 0, 0);
+
+          if (medication.isActive && endDateOnly >= today) {
             const notificationIds = await scheduleMedicationNotifications(
               medication.id,
               medication.startDate,
@@ -182,6 +238,14 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) throw new Error("No user authenticated");
 
+      // Formatear fechas para guardar en la BD (YYYY-MM-DD en zona horaria local)
+      const formatDateForDB = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       const { data, error } = await supabase
         .from("medications")
         .insert({
@@ -191,10 +255,10 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
           dosage: medication.dosage,
           frequency_hours: medication.frequencyHours,
           duration_days: medication.durationDays,
-          start_date: medication.startDate.toISOString().split("T")[0],
+          start_date: formatDateForDB(medication.startDate),
           start_time: medication.startTime,
           times: medication.scheduledTimes,
-          end_date: medication.endDate.toISOString().split("T")[0],
+          end_date: formatDateForDB(medication.endDate),
           notes: medication.notes,
           is_active: medication.isActive,
           notification_time: medication.notificationTime,
@@ -212,10 +276,10 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
         dosage: data.dosage,
         frequencyHours: data.frequency_hours,
         durationDays: data.duration_days,
-        startDate: new Date(data.start_date),
+        startDate: medication.startDate, // Usar la fecha original
         startTime: data.start_time,
         scheduledTimes: data.times || [],
-        endDate: new Date(data.end_date),
+        endDate: medication.endDate, // Usar la fecha original
         notes: data.notes,
         isActive: data.is_active,
         notificationTime: data.notification_time as NotificationTime,
@@ -262,6 +326,14 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
         await cancelMedicationNotifications(existingMedication.notificationIds);
       }
 
+      // Formatear fechas para guardar en la BD (YYYY-MM-DD en zona horaria local)
+      const formatDateForDB = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       const { error } = await supabase
         .from("medications")
         .update({
@@ -270,10 +342,10 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
           dosage: updatedMedication.dosage,
           frequency_hours: updatedMedication.frequencyHours,
           duration_days: updatedMedication.durationDays,
-          start_date: updatedMedication.startDate.toISOString().split("T")[0],
+          start_date: formatDateForDB(updatedMedication.startDate),
           start_time: updatedMedication.startTime,
           times: updatedMedication.scheduledTimes,
-          end_date: updatedMedication.endDate.toISOString().split("T")[0],
+          end_date: formatDateForDB(updatedMedication.endDate),
           notes: updatedMedication.notes,
           is_active: updatedMedication.isActive,
           notification_time: updatedMedication.notificationTime,

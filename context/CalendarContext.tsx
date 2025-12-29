@@ -83,20 +83,65 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const loadAppointments = async () => {
     try {
       setLoading(true);
+
+      if (!user) {
+        setAppointments([]);
+        return;
+      }
+
+      // Obtener IDs de usuarios que han compartido acceso conmigo
+      const { data: sharedAccess, error: sharedError } = await supabase
+        .from("shared_access")
+        .select("owner_id")
+        .eq("shared_with_email", user.email)
+        .eq("status", "accepted");
+
+      if (sharedError) throw sharedError;
+
+      const sharedOwnerIds = (sharedAccess || []).map((s: any) => s.owner_id);
+      const allUserIds = [user.id, ...sharedOwnerIds];
+
+      // Obtener IDs de perros de todos los usuarios con acceso
+      const { data: dogsData, error: dogsError } = await supabase
+        .from("dogs")
+        .select("id")
+        .in("user_id", allUserIds);
+
+      if (dogsError) throw dogsError;
+
+      const dogIds = (dogsData || []).map((d: any) => d.id);
+
+      if (dogIds.length === 0) {
+        setAppointments([]);
+        setLoading(false);
+        return;
+      }
+
+      // Obtener citas de esos perros
       const { data, error } = await supabase
         .from("appointments")
         .select("*, dogs(name)")
+        .in("dog_id", dogIds)
         .order("date", { ascending: true });
 
       if (error) throw error;
 
       const appointmentsWithDates = await Promise.all(
         (data || []).map(async (apt: any) => {
+          // Parsear la fecha en la zona horaria local
+          // apt.date viene en formato YYYY-MM-DD desde Supabase
+          const dateParts = apt.date.split('-');
+          const appointmentDate = new Date(
+            parseInt(dateParts[0]),
+            parseInt(dateParts[1]) - 1,
+            parseInt(dateParts[2])
+          );
+
           const appointment: Appointment = {
             id: apt.id,
             dogId: apt.dog_id,
             dogName: apt.dogs?.name || "",
-            date: new Date(apt.date),
+            date: appointmentDate,
             time: apt.time,
             type: apt.type as AppointmentType,
             notes: apt.notes,
@@ -104,8 +149,13 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           };
 
           // Reprogramar notificaciones para citas futuras
-          const appointmentDate = new Date(apt.date);
-          if (appointmentDate > new Date()) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const aptDateOnly = new Date(appointmentDate);
+          aptDateOnly.setHours(0, 0, 0, 0);
+          
+          if (aptDateOnly >= today) {
             const notificationId = await scheduleAppointmentNotification(
               apt.id,
               appointment.date,
@@ -135,6 +185,12 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) throw new Error("No user authenticated");
 
+      // Formatear la fecha para guardar en la BD (YYYY-MM-DD en zona horaria local)
+      const year = appointment.date.getFullYear();
+      const month = String(appointment.date.getMonth() + 1).padStart(2, '0');
+      const day = String(appointment.date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
       const { data, error } = await supabase
         .from("appointments")
         .insert({
@@ -142,7 +198,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           dog_id: appointment.dogId,
           type: appointment.type,
           title: appointmentTypeLabels[appointment.type],
-          date: appointment.date.toISOString().split("T")[0],
+          date: dateString,
           time: appointment.time,
           notes: appointment.notes,
           notification_time: appointment.notificationTime,
@@ -156,7 +212,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         id: data.id,
         dogId: data.dog_id,
         dogName: appointment.dogName,
-        date: new Date(data.date),
+        date: appointment.date, // Usar la fecha original que ya está en la zona horaria correcta
         time: data.time,
         type: data.type as AppointmentType,
         notes: data.notes,
@@ -197,13 +253,19 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         );
       }
 
+      // Formatear la fecha para guardar en la BD (YYYY-MM-DD en zona horaria local)
+      const year = updatedAppointment.date.getFullYear();
+      const month = String(updatedAppointment.date.getMonth() + 1).padStart(2, '0');
+      const day = String(updatedAppointment.date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
       const { error } = await supabase
         .from("appointments")
         .update({
           dog_id: updatedAppointment.dogId,
           type: updatedAppointment.type,
           title: appointmentTypeLabels[updatedAppointment.type],
-          date: updatedAppointment.date.toISOString().split("T")[0],
+          date: dateString,
           time: updatedAppointment.time,
           notes: updatedAppointment.notes,
           notification_time: updatedAppointment.notificationTime,

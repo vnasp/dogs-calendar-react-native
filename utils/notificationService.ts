@@ -80,7 +80,7 @@ export async function scheduleAppointmentNotification(
     return null;
   }
 
-  // Combinar fecha y hora
+  // Combinar fecha y hora en la zona horaria local
   const [hours, mins] = appointmentTime.split(":").map(Number);
   const appointmentDateTime = new Date(appointmentDate);
   appointmentDateTime.setHours(hours, mins, 0, 0);
@@ -91,11 +91,28 @@ export async function scheduleAppointmentNotification(
   );
 
   // Solo programar si es en el futuro
-  if (notificationDate <= new Date()) {
+  const now = new Date();
+  if (notificationDate <= now) {
+    console.log(
+      `⏰ No se programa notificación para ${appointmentType} - ${dogName}: la fecha ya pasó`,
+      {
+        notificationDate: notificationDate.toISOString(),
+        now: now.toISOString(),
+      }
+    );
     return null;
   }
 
   try {
+    console.log(
+      `📅 Programando notificación para ${appointmentType} - ${dogName}:`,
+      {
+        appointmentDateTime: appointmentDateTime.toISOString(),
+        notificationDate: notificationDate.toISOString(),
+        minutesBefore: minutes,
+      }
+    );
+
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: `🐕 Recordatorio: ${dogName}`,
@@ -109,9 +126,10 @@ export async function scheduleAppointmentNotification(
       },
     });
 
+    console.log(`✅ Notificación programada con ID: ${notificationId}`);
     return notificationId;
   } catch (error) {
-    console.error("Error al programar notificación:", error);
+    console.error("❌ Error al programar notificación:", error);
     return null;
   }
 }
@@ -187,6 +205,7 @@ export async function scheduleExerciseNotifications(
           hour: notificationDate.getHours(),
           minute: notificationDate.getMinutes(),
           repeats: true, // Repetir diariamente
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Zona horaria local
         },
       });
 

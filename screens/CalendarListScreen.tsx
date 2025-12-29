@@ -64,15 +64,44 @@ export default function CalendarListScreen({
   const getFilteredAppointments = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayTime = today.getTime();
 
     const sorted = [...appointments].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => {
+        const aDate = new Date(
+          a.date.getFullYear(),
+          a.date.getMonth(),
+          a.date.getDate()
+        );
+        const bDate = new Date(
+          b.date.getFullYear(),
+          b.date.getMonth(),
+          b.date.getDate()
+        );
+        return aDate.getTime() - bDate.getTime();
+      }
     );
 
     if (filter === "upcoming") {
-      return sorted.filter((apt) => new Date(apt.date) >= today);
+      return sorted.filter((apt) => {
+        const aptDate = new Date(
+          apt.date.getFullYear(),
+          apt.date.getMonth(),
+          apt.date.getDate()
+        );
+        aptDate.setHours(0, 0, 0, 0);
+        return aptDate.getTime() >= todayTime;
+      });
     } else if (filter === "past") {
-      return sorted.filter((apt) => new Date(apt.date) < today).reverse();
+      return sorted.filter((apt) => {
+        const aptDate = new Date(
+          apt.date.getFullYear(),
+          apt.date.getMonth(),
+          apt.date.getDate()
+        );
+        aptDate.setHours(0, 0, 0, 0);
+        return aptDate.getTime() < todayTime;
+      }).reverse();
     }
     return sorted;
   };
