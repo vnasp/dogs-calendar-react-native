@@ -5,11 +5,13 @@ import {
   useCalendar,
   appointmentTypeLabels,
   appointmentTypeColors,
+  recurrenceLabels,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
 import Logo from "../components/Logo";
-import HeaderAddButton from "../components/HeaderAddButton";
+import Header from "../components/Header";
+import HeaderIcon from "../components/HeaderIcon";
 import AppointmentIcon from "../components/AppointmentIcon";
 import EditButton from "../components/EditButton";
 import DeleteButton from "../components/DeleteButton";
@@ -19,6 +21,8 @@ import {
   Calendar as CalendarIcon,
   Clock,
   Bell,
+  Plus,
+  Repeat,
 } from "lucide-react-native";
 
 interface CalendarListScreenProps {
@@ -66,21 +70,19 @@ export default function CalendarListScreen({
     today.setHours(0, 0, 0, 0);
     const todayTime = today.getTime();
 
-    const sorted = [...appointments].sort(
-      (a, b) => {
-        const aDate = new Date(
-          a.date.getFullYear(),
-          a.date.getMonth(),
-          a.date.getDate()
-        );
-        const bDate = new Date(
-          b.date.getFullYear(),
-          b.date.getMonth(),
-          b.date.getDate()
-        );
-        return aDate.getTime() - bDate.getTime();
-      }
-    );
+    const sorted = [...appointments].sort((a, b) => {
+      const aDate = new Date(
+        a.date.getFullYear(),
+        a.date.getMonth(),
+        a.date.getDate()
+      );
+      const bDate = new Date(
+        b.date.getFullYear(),
+        b.date.getMonth(),
+        b.date.getDate()
+      );
+      return aDate.getTime() - bDate.getTime();
+    });
 
     if (filter === "upcoming") {
       return sorted.filter((apt) => {
@@ -93,15 +95,17 @@ export default function CalendarListScreen({
         return aptDate.getTime() >= todayTime;
       });
     } else if (filter === "past") {
-      return sorted.filter((apt) => {
-        const aptDate = new Date(
-          apt.date.getFullYear(),
-          apt.date.getMonth(),
-          apt.date.getDate()
-        );
-        aptDate.setHours(0, 0, 0, 0);
-        return aptDate.getTime() < todayTime;
-      }).reverse();
+      return sorted
+        .filter((apt) => {
+          const aptDate = new Date(
+            apt.date.getFullYear(),
+            apt.date.getMonth(),
+            apt.date.getDate()
+          );
+          aptDate.setHours(0, 0, 0, 0);
+          return aptDate.getTime() < todayTime;
+        })
+        .reverse();
     }
     return sorted;
   };
@@ -110,7 +114,7 @@ export default function CalendarListScreen({
 
   return (
     <SafeAreaView
-      className="flex-1 bg-cyan-600"
+      className="flex-1 bg-[#10B981]"
       edges={["top", "left", "right"]}
     >
       <ScrollView
@@ -118,65 +122,66 @@ export default function CalendarListScreen({
         contentContainerStyle={{ paddingBottom: 100 }}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <View className="bg-cyan-600 pt-6 pb-6 px-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Logo />
-            {dogs.length > 0 && (
-              <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
-            )}
-          </View>
-          <Text className="text-white text-xl font-bold mb-4">Calendario</Text>
-
-          {/* Filtros */}
-          <View className="flex-row gap-2">
-            <TouchableOpacity
-              onPress={() => setFilter("upcoming")}
-              className={`flex-1 py-2 rounded-lg ${
-                filter === "upcoming" ? "bg-white" : "bg-green-500"
-              }`}
-            >
-              <Text
-                className={`text-center font-semibold ${
-                  filter === "upcoming" ? "text-green-700" : "text-white"
-                }`}
-              >
-                Próximas
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setFilter("past")}
-              className={`flex-1 py-2 rounded-lg ${
-                filter === "past" ? "bg-white" : "bg-green-500"
-              }`}
-            >
-              <Text
-                className={`text-center font-semibold ${
-                  filter === "past" ? "text-green-700" : "text-white"
-                }`}
-              >
-                Pasadas
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setFilter("all")}
-              className={`flex-1 py-2 rounded-lg ${
-                filter === "all" ? "bg-white" : "bg-green-500"
-              }`}
-            >
-              <Text
-                className={`text-center font-semibold ${
-                  filter === "all" ? "text-green-700" : "text-white"
-                }`}
-              >
-                Todas
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <Header
+          leftButton={<Logo />}
+          rightButton={
+            dogs.length > 0 ? (
+              <HeaderIcon Icon={Plus} onPress={() => onNavigateToAddEdit()} />
+            ) : undefined
+          }
+          subtitle="Calendario"
+        />
 
         {/* Contenido con redondeado superior */}
         <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4 px-6 pt-6">
+          {/* Filtros debajo del header */}
+          <View className="px-6 pb-6">
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => setFilter("upcoming")}
+                className={`flex-1 py-2 rounded-lg ${
+                  filter === "upcoming" ? "bg-white" : "bg-[#0F7D63]"
+                }`}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    filter === "upcoming" ? "text-[#0F7D63]" : "text-white"
+                  }`}
+                >
+                  Próximas
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setFilter("past")}
+                className={`flex-1 py-2 rounded-lg ${
+                  filter === "past" ? "bg-white" : "bg-[#0F7D63]"
+                }`}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    filter === "past" ? "text-[#0F7D63]" : "text-white"
+                  }`}
+                >
+                  Pasadas
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setFilter("all")}
+                className={`flex-1 py-2 rounded-lg ${
+                  filter === "all" ? "bg-white" : "bg-[#0F7D63]"
+                }`}
+              >
+                <Text
+                  className={`text-center font-semibold ${
+                    filter === "all" ? "text-[#0F7D63]" : "text-white"
+                  }`}
+                >
+                  Todas
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {dogs.length === 0 ? (
             <View className="items-center justify-center py-20">
               <Dog size={80} color="#9CA3AF" strokeWidth={1.5} />
@@ -227,7 +232,10 @@ export default function CalendarListScreen({
                     {/* Información */}
                     <View className="flex-1">
                       <Text className="text-gray-900 text-lg font-bold mb-1">
-                        {appointmentTypeLabels[appointment.type]}
+                        {appointment.type === "otro" &&
+                        appointment.customTypeDescription
+                          ? appointment.customTypeDescription
+                          : appointmentTypeLabels[appointment.type]}
                       </Text>
                       <View className="flex-row items-center mb-1">
                         <Dog size={14} color="#374151" strokeWidth={2} />
@@ -253,6 +261,19 @@ export default function CalendarListScreen({
                           </Text>
                         </View>
                       </View>
+                      {((appointment.recurrencePattern &&
+                        appointment.recurrencePattern !== "none") ||
+                        appointment.recurrenceParentId) && (
+                        <View className="flex-row items-center mb-1">
+                          <Repeat size={14} color="#9333ea" strokeWidth={2} />
+                          <Text className="text-purple-600 text-sm ml-1">
+                            {appointment.recurrencePattern &&
+                            appointment.recurrencePattern !== "none"
+                              ? recurrenceLabels[appointment.recurrencePattern]
+                              : "Serie recurrente"}
+                          </Text>
+                        </View>
+                      )}
                       {appointment.notificationTime &&
                         appointment.notificationTime !== "none" && (
                           <View className="flex-row items-center mt-1">
@@ -268,16 +289,12 @@ export default function CalendarListScreen({
                         </Text>
                       )}
                     </View>
-                  </View>
 
-                  {/* Botones de acción */}
-                  <View className="flex-row gap-2">
-                    <View className="flex-1">
+                    {/* Botones de acción - columna derecha */}
+                    <View className="gap-2 ml-3">
                       <EditButton
                         onPress={() => onNavigateToAddEdit(appointment.id)}
                       />
-                    </View>
-                    <View className="flex-1">
                       <DeleteButton
                         onPress={() => handleDelete(appointment.id)}
                       />

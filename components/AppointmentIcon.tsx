@@ -29,9 +29,7 @@ export default function AppointmentIcon({
       return (
         <Stethoscope size={size} color={color} strokeWidth={strokeWidth} />
       );
-    case "radiografia":
-      return <ScanLine size={size} color={color} strokeWidth={strokeWidth} />;
-    case "prequirurgico":
+    case "examenes":
       return (
         <ClipboardList size={size} color={color} strokeWidth={strokeWidth} />
       );

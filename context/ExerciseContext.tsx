@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { supabase } from "../utils/supabase";
+import { supabase, formatLocalDate } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
 import { Completion } from "./MedicationContext";
@@ -19,10 +19,9 @@ import {
 export type ExerciseType =
   | "caminata"
   | "cavaletti"
-  | "natacion"
-  | "carrera"
-  | "juego"
-  | "fisioterapia"
+  | "balanceo"
+  | "slalom"
+  | "entrenamiento"
   | "otro";
 
 export interface Exercise {
@@ -30,6 +29,7 @@ export interface Exercise {
   dogId: string;
   dogName: string;
   type: ExerciseType;
+  customTypeDescription?: string; // Descripción personalizada cuando type es "otro"
   durationMinutes: number;
   timesPerDay: number;
   startTime: string; // HH:mm formato 24h
@@ -179,6 +179,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
             dogId: ex.dog_id,
             dogName: ex.dogs?.name || "",
             type: ex.type as ExerciseType,
+            customTypeDescription: ex.custom_type_description,
             durationMinutes: ex.duration_minutes,
             timesPerDay: ex.times_per_day,
             startTime: ex.start_time,
@@ -196,11 +197,14 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
 
           // Reprogramar notificaciones para ejercicios activos
           if (exercise.isActive) {
+            const displayName = exercise.type === "otro" && exercise.customTypeDescription
+              ? exercise.customTypeDescription
+              : exerciseTypeLabels[exercise.type];
             const notificationIds = await scheduleExerciseNotifications(
               exercise.id,
               exercise.scheduledTimes,
               exercise.dogName,
-              exerciseTypeLabels[exercise.type],
+              displayName,
               exercise.notificationTime
             );
             if (notificationIds.length > 0) {
@@ -230,18 +234,19 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
           user_id: user.id,
           dog_id: exercise.dogId,
           type: exercise.type,
-          title: exerciseTypeLabels[exercise.type],
+          custom_type_description: exercise.customTypeDescription || null,
+          title: exercise.type === "otro" && exercise.customTypeDescription
+            ? exercise.customTypeDescription
+            : exerciseTypeLabels[exercise.type],
           duration_minutes: exercise.durationMinutes,
           times_per_day: exercise.timesPerDay,
           start_time: exercise.startTime,
           end_time: exercise.endTime,
           scheduled_times: exercise.scheduledTimes,
-          start_date: exercise.startDate.toISOString().split("T")[0],
+          start_date: formatLocalDate(exercise.startDate),
           is_permanent: exercise.isPermanent,
           duration_weeks: exercise.durationWeeks,
-          end_date: exercise.endDate
-            ? exercise.endDate.toISOString().split("T")[0]
-            : null,
+          end_date: exercise.endDate ? formatLocalDate(exercise.endDate) : null,
           notes: exercise.notes,
           is_active: exercise.isActive,
           notification_time: exercise.notificationTime,
@@ -256,6 +261,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
         dogId: data.dog_id,
         dogName: exercise.dogName,
         type: data.type as ExerciseType,
+        customTypeDescription: data.custom_type_description,
         durationMinutes: data.duration_minutes,
         timesPerDay: data.times_per_day,
         startTime: data.start_time,
@@ -272,11 +278,14 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
       };
 
       // Programar notificaciones para cada horario
+      const displayName = newExercise.type === "otro" && newExercise.customTypeDescription
+        ? newExercise.customTypeDescription
+        : exerciseTypeLabels[newExercise.type];
       const notificationIds = await scheduleExerciseNotifications(
         newExercise.id,
         newExercise.scheduledTimes,
         newExercise.dogName,
-        exerciseTypeLabels[newExercise.type],
+        displayName,
         newExercise.notificationTime
       );
 
@@ -312,17 +321,20 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
         .update({
           dog_id: updatedExercise.dogId,
           type: updatedExercise.type,
-          title: exerciseTypeLabels[updatedExercise.type],
+          custom_type_description: updatedExercise.customTypeDescription || null,
+          title: updatedExercise.type === "otro" && updatedExercise.customTypeDescription
+            ? updatedExercise.customTypeDescription
+            : exerciseTypeLabels[updatedExercise.type],
           duration_minutes: updatedExercise.durationMinutes,
           times_per_day: updatedExercise.timesPerDay,
           start_time: updatedExercise.startTime,
           end_time: updatedExercise.endTime,
           scheduled_times: updatedExercise.scheduledTimes,
-          start_date: updatedExercise.startDate.toISOString().split("T")[0],
+          start_date: formatLocalDate(updatedExercise.startDate),
           is_permanent: updatedExercise.isPermanent,
           duration_weeks: updatedExercise.durationWeeks,
           end_date: updatedExercise.endDate
-            ? updatedExercise.endDate.toISOString().split("T")[0]
+            ? formatLocalDate(updatedExercise.endDate)
             : null,
           notes: updatedExercise.notes,
           is_active: updatedExercise.isActive,
@@ -333,11 +345,14 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       // Programar nuevas notificaciones
+      const displayName = updatedExercise.type === "otro" && updatedExercise.customTypeDescription
+        ? updatedExercise.customTypeDescription
+        : exerciseTypeLabels[updatedExercise.type];
       const notificationIds = await scheduleExerciseNotifications(
         id,
         updatedExercise.scheduledTimes,
         updatedExercise.dogName,
-        exerciseTypeLabels[updatedExercise.type],
+        displayName,
         updatedExercise.notificationTime
       );
 
@@ -425,16 +440,17 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
           item_type: "exercise",
           item_id: exerciseId,
           scheduled_time: scheduledTime,
-          completed_date: new Date().toISOString().split("T")[0],
+          completed_date: formatLocalDate(),
         });
 
         if (error) throw error;
+        await loadExercises();
       } catch (error) {
-        console.error("Error marking exercise completed:", error);
+        console.error("Error marking exercise as completed:", error);
         throw error;
       }
     },
-    [user]
+    [user, loadExercises]
   );
 
   const getTodayCompletions = useCallback(
@@ -443,7 +459,7 @@ export function ExerciseProvider({ children }: { children: ReactNode }) {
       scheduledTime: string
     ): Promise<Completion | null> => {
       try {
-        const today = new Date().toISOString().split("T")[0];
+        const today = formatLocalDate();
         const { data, error } = await supabase
           .from("completions")
           .select("*")
@@ -504,19 +520,17 @@ export function useExercise() {
 export const exerciseTypeLabels: Record<ExerciseType, string> = {
   caminata: "Caminata",
   cavaletti: "Cavaletti",
-  natacion: "Natación",
-  carrera: "Carrera",
-  juego: "Juego",
-  fisioterapia: "Fisioterapia",
+  balanceo: "Balanceo",
+  slalom: "Slalom",
+  entrenamiento: "Entrenamiento",
   otro: "Otro",
 };
 
 export const exerciseTypeColors: Record<ExerciseType, string> = {
   caminata: "bg-blue-100",
   cavaletti: "bg-orange-100",
-  natacion: "bg-cyan-100",
-  carrera: "bg-red-100",
-  juego: "bg-yellow-100",
-  fisioterapia: "bg-purple-100",
+  balanceo: "bg-purple-100",
+  slalom: "bg-green-100",
+  entrenamiento: "bg-yellow-100",
   otro: "bg-gray-100",
 };

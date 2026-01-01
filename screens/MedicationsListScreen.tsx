@@ -12,7 +12,8 @@ import { useMedication } from "../context/MedicationContext";
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
 import Logo from "../components/Logo";
-import HeaderAddButton from "../components/HeaderAddButton";
+import Header from "../components/Header";
+import HeaderIcon from "../components/HeaderIcon";
 import EditButton from "../components/EditButton";
 import DeleteButton from "../components/DeleteButton";
 import {
@@ -27,6 +28,7 @@ import {
   Infinity,
   X,
   Bell,
+  Plus,
 } from "lucide-react-native";
 
 interface MedicationsListScreenProps {
@@ -76,16 +78,20 @@ export default function MedicationsListScreen({
   };
 
   const getDaysRemaining = (endDate: Date) => {
+    // Normalizar fechas a medianoche para comparar solo días
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
     const diffTime = end.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
 
   return (
     <SafeAreaView
-      className="flex-1 bg-cyan-600"
+      className="flex-1 bg-[#10B981]"
       edges={["top", "left", "right"]}
     >
       <ScrollView
@@ -93,16 +99,15 @@ export default function MedicationsListScreen({
         contentContainerStyle={{ paddingBottom: 100 }}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <View className="bg-cyan-600 pt-6 pb-6 px-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Logo />
-            {dogs.length > 0 && (
-              <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
-            )}
-          </View>
-          <Text className="text-white text-xl font-bold">Medicamentos</Text>
-        </View>
+        <Header
+          leftButton={<Logo />}
+          rightButton={
+            dogs.length > 0 ? (
+              <HeaderIcon Icon={Plus} onPress={() => onNavigateToAddEdit()} />
+            ) : undefined
+          }
+          subtitle="Medicamentos"
+        />
 
         {/* Contenido con redondeado superior */}
         <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4 px-6 pt-6">
@@ -161,7 +166,7 @@ export default function MedicationsListScreen({
                                 : ""
                             }`}
                           >
-                            <View className="flex-row items-start mb-3">
+                            <View className="flex-row">
                               {/* Icono */}
                               <View className="w-12 h-12 bg-pink-100 rounded-xl items-center justify-center mr-3">
                                 <Pill
@@ -313,32 +318,13 @@ export default function MedicationsListScreen({
                                 )}
                               </View>
 
-                              {/* Switch activo/inactivo */}
-                              <Switch
-                                value={medication.isActive}
-                                onValueChange={() =>
-                                  toggleMedicationActive(medication.id)
-                                }
-                                trackColor={{
-                                  false: "#D1D5DB",
-                                  true: "#EC4899",
-                                }}
-                                thumbColor={
-                                  medication.isActive ? "#FFFFFF" : "#F3F4F6"
-                                }
-                              />
-                            </View>
-
-                            {/* Botones de acción */}
-                            <View className="flex-row gap-2">
-                              <View className="flex-1">
+                              {/* Botones de acción - columna derecha */}
+                              <View className="gap-2 ml-3">
                                 <EditButton
                                   onPress={() =>
                                     onNavigateToAddEdit(medication.id)
                                   }
                                 />
-                              </View>
-                              <View className="flex-1">
                                 <DeleteButton
                                   onPress={() =>
                                     handleDelete(

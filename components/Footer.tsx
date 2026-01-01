@@ -99,7 +99,7 @@ export default function Footer({
                 : "text-gray-600"
             }`}
           >
-            Calendario
+            Citas
           </Text>
         </TouchableOpacity>
         <TouchableOpacity

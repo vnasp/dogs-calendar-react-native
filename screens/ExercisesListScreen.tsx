@@ -16,7 +16,8 @@ import {
 import { useDogs } from "../context/DogsContext";
 import { notificationLabels } from "../components/NotificationSelector";
 import Logo from "../components/Logo";
-import HeaderAddButton from "../components/HeaderAddButton";
+import Header from "../components/Header";
+import HeaderIcon from "../components/HeaderIcon";
 import ExerciseIcon from "../components/ExerciseIcon";
 import EditButton from "../components/EditButton";
 import DeleteButton from "../components/DeleteButton";
@@ -28,6 +29,7 @@ import {
   Repeat,
   Bell,
   Timer,
+  Plus,
 } from "lucide-react-native";
 
 interface ExercisesListScreenProps {
@@ -65,7 +67,7 @@ export default function ExercisesListScreen({
 
   return (
     <SafeAreaView
-      className="flex-1 bg-cyan-600"
+      className="flex-1 bg-[#10B981]"
       edges={["top", "left", "right"]}
     >
       <ScrollView
@@ -73,16 +75,15 @@ export default function ExercisesListScreen({
         contentContainerStyle={{ paddingBottom: 100 }}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <View className="bg-cyan-600 pt-6 pb-6 px-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Logo />
-            {dogs.length > 0 && (
-              <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
-            )}
-          </View>
-          <Text className="text-white text-xl font-bold">Ejercicios</Text>
-        </View>
+        <Header
+          leftButton={<Logo />}
+          rightButton={
+            dogs.length > 0 ? (
+              <HeaderIcon Icon={Plus} onPress={() => onNavigateToAddEdit()} />
+            ) : undefined
+          }
+          subtitle="Ejercicios"
+        />
 
         {/* Contenido con redondeado superior */}
         <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4 px-6 pt-6">
@@ -146,7 +147,10 @@ export default function ExercisesListScreen({
                             {/* Información */}
                             <View className="flex-1">
                               <Text className="text-gray-900 text-lg font-bold mb-1">
-                                {exerciseTypeLabels[exercise.type]}
+                                {exercise.type === "otro" &&
+                                exercise.customTypeDescription
+                                  ? exercise.customTypeDescription
+                                  : exerciseTypeLabels[exercise.type]}
                               </Text>
                               <View className="flex-row items-center mb-1">
                                 <Timer
@@ -207,27 +211,11 @@ export default function ExercisesListScreen({
                               )}
                             </View>
 
-                            {/* Switch activo/inactivo */}
-                            <Switch
-                              value={exercise.isActive}
-                              onValueChange={() =>
-                                toggleExerciseActive(exercise.id)
-                              }
-                              trackColor={{ false: "#D1D5DB", true: "#14B8A6" }}
-                              thumbColor={
-                                exercise.isActive ? "#FFFFFF" : "#F3F4F6"
-                              }
-                            />
-                          </View>
-
-                          {/* Botones de acción */}
-                          <View className="flex-row gap-2">
-                            <View className="flex-1">
+                            {/* Botones de acción - columna derecha */}
+                            <View className="gap-2 ml-3">
                               <EditButton
                                 onPress={() => onNavigateToAddEdit(exercise.id)}
                               />
-                            </View>
-                            <View className="flex-1">
                               <DeleteButton
                                 onPress={() =>
                                   handleDelete(exercise.id, dog.name)

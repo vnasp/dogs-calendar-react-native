@@ -7,6 +7,8 @@ import { useExercise, exerciseTypeLabels } from "../context/ExerciseContext";
 import SwipeableCard from "../components/SwipeableCard";
 import ExerciseIcon from "../components/ExerciseIcon";
 import Logo from "../components/Logo";
+import Header from "../components/Header";
+import HeaderIcon from "../components/HeaderIcon";
 import * as Notifications from "expo-notifications";
 import {
   Calendar,
@@ -84,8 +86,21 @@ export default function HomeScreen({
 
   // Crear instancias individuales de medicamentos por horario (solo hoy)
   const todayMedicationInstances = useMemo(() => {
-    return medications
-      .filter((med) => med.isActive && med.durationDays > 0)
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const instances = medications
+      .filter((med) => {
+        if (!med.isActive) return false;
+
+        // Si es continuo (durationDays === 0), siempre se muestra
+        if (med.durationDays === 0) return true;
+
+        // Si tiene duración, verificar que no haya expirado
+        const endDate = new Date(med.endDate);
+        endDate.setHours(0, 0, 0, 0);
+        return endDate.getTime() >= now.getTime();
+      })
       .flatMap((med) =>
         med.scheduledTimes.map((time) => ({
           type: "medication" as const,
@@ -97,12 +112,31 @@ export default function HomeScreen({
           data: med, // Referencia directa sin spread
         }))
       );
+
+    return instances;
   }, [medications]);
 
   // Crear instancias individuales de ejercicios por horario (solo hoy)
   const todayExerciseInstances = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
     return exercises
-      .filter((ex) => ex.isActive)
+      .filter((ex) => {
+        if (!ex.isActive) return false;
+
+        // Si es permanente, siempre se muestra
+        if (ex.isPermanent) return true;
+
+        // Si tiene duración, verificar que no haya expirado
+        if (ex.endDate) {
+          const endDate = new Date(ex.endDate);
+          endDate.setHours(0, 0, 0, 0);
+          return endDate.getTime() >= now.getTime();
+        }
+
+        return true;
+      })
       .flatMap((ex) =>
         ex.scheduledTimes.map((time) => ({
           type: "exercise" as const,
@@ -282,8 +316,6 @@ export default function HomeScreen({
         },
       });
 
-      console.log("✅ Notificación programada con ID:", notificationId);
-
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
       console.log("📋 Total de notificaciones programadas:", scheduled.length);
 
@@ -304,7 +336,7 @@ export default function HomeScreen({
 
   return (
     <SafeAreaView
-      className="flex-1 bg-cyan-600"
+      className="flex-1 bg-[#10B981]"
       edges={["top", "left", "right"]}
     >
       <ScrollView
@@ -312,36 +344,15 @@ export default function HomeScreen({
         contentContainerStyle={{ paddingBottom: 100 }}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <View className="bg-cyan-600 pt-6 pb-6 px-6">
-          <View className="flex-row items-center justify-between">
-            <Logo />
+        <Header
+          leftButton={<Logo />}
+          rightButton={
             <View className="flex-row gap-2">
-              <TouchableOpacity
-                onPress={testNotification}
-                className="w-12 h-12 bg-cyan-700 rounded-xl items-center justify-center"
-              >
-                <Bell
-                  size={24}
-                  color="white"
-                  strokeWidth={2.5}
-                  pointerEvents="none"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={onNavigateToSharedAccess}
-                className="w-12 h-12 bg-cyan-700 rounded-xl items-center justify-center"
-              >
-                <UserPlus
-                  size={24}
-                  color="white"
-                  strokeWidth={2.5}
-                  pointerEvents="none"
-                />
-              </TouchableOpacity>
+              <HeaderIcon Icon={Bell} onPress={testNotification} />
+              <HeaderIcon Icon={UserPlus} onPress={onNavigateToSharedAccess} />
             </View>
-          </View>
-        </View>
+          }
+        />
 
         {/* Contenido con redondeado superior */}
         <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4">
@@ -357,13 +368,21 @@ export default function HomeScreen({
               <View className="gap-3">
                 {allTodayEvents.map((event) => {
                   if (event.type === "appointment") {
+                    const completion = completions[`appointment-${event.id}`];
+                    // Ocultar si está completado
+                    if (completion) return null;
+
                     return (
-                      <TouchableOpacity
+                      <SwipeableCard
                         key={`appointment-${event.id}`}
-                        onPress={onNavigateToCalendar}
-                        className="bg-white rounded-2xl p-4 shadow-sm"
+                        onComplete={() => handleCompleteAppointment(event.id)}
+                        isCompleted={!!completion}
+                        completedBy={completion ? "Listo" : undefined}
                       >
-                        <View className="flex-row items-center">
+                        <TouchableOpacity
+                          onPress={onNavigateToCalendar}
+                          className="flex-row items-center"
+                        >
                           <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center mr-3">
                             <Calendar
                               size={24}
@@ -374,14 +393,17 @@ export default function HomeScreen({
                           <View className="flex-1">
                             <Text className="text-gray-900 font-semibold mb-1">
                               {event.dogName} -{" "}
-                              {appointmentTypeLabels[event.data.type]}
+                              {event.data.type === "otro" &&
+                              event.data.customTypeDescription
+                                ? event.data.customTypeDescription
+                                : appointmentTypeLabels[event.data.type]}
                             </Text>
                             <Text className="text-gray-600 text-sm">
                               {event.time}
                             </Text>
                           </View>
-                        </View>
-                      </TouchableOpacity>
+                        </TouchableOpacity>
+                      </SwipeableCard>
                     );
                   } else if (event.type === "medication") {
                     const completion =
@@ -463,7 +485,10 @@ export default function HomeScreen({
                           <View className="flex-1">
                             <Text className="text-gray-900 font-semibold mb-1">
                               {event.dogName} -{" "}
-                              {exerciseTypeLabels[event.data.type]}
+                              {event.data.type === "otro" &&
+                              event.data.customTypeDescription
+                                ? event.data.customTypeDescription
+                                : exerciseTypeLabels[event.data.type]}
                             </Text>
                             <Text className="text-gray-600 text-sm">
                               {event.data.durationMinutes} min •{" "}

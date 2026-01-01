@@ -58,8 +58,6 @@ export function SharedAccessProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
 
-      console.log("🔍 Cargando accesos compartidos para:", user?.email);
-
       // Cargar invitaciones enviadas
       const { data: sent, error: sentError } = await supabase
         .from("shared_access")
@@ -68,8 +66,6 @@ export function SharedAccessProvider({ children }: { children: ReactNode }) {
 
       if (sentError) throw sentError;
 
-      console.log("📤 Invitaciones enviadas:", sent?.length || 0);
-
       // Cargar invitaciones recibidas (sin intentar relacionar con auth.users)
       const { data: received, error: receivedError } = await supabase
         .from("shared_access")
@@ -77,12 +73,6 @@ export function SharedAccessProvider({ children }: { children: ReactNode }) {
         .eq("shared_with_email", user?.email);
 
       if (receivedError) throw receivedError;
-
-      console.log(
-        "📥 Invitaciones recibidas:",
-        received?.length || 0,
-        received
-      );
 
       const sentMapped = (sent || []).map((item: any) => ({
         id: item.id,
@@ -112,11 +102,6 @@ export function SharedAccessProvider({ children }: { children: ReactNode }) {
         ...sentMapped.filter((s) => s.status === "accepted"),
         ...receivedMapped.filter((s) => s.status === "accepted"),
       ]);
-
-      console.log(
-        "✅ Invitaciones pendientes recibidas:",
-        receivedMapped.filter((s) => s.status === "pending").length
-      );
     } catch (error) {
       console.error("Error loading shared access:", error);
     } finally {

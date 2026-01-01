@@ -126,10 +126,8 @@ export async function scheduleAppointmentNotification(
       },
     });
 
-    console.log(`✅ Notificación programada con ID: ${notificationId}`);
     return notificationId;
   } catch (error) {
-    console.error("❌ Error al programar notificación:", error);
     return null;
   }
 }

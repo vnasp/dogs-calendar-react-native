@@ -8,7 +8,6 @@ import {
   Alert,
   Platform,
   PanResponder,
-  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -25,7 +24,9 @@ import NotificationSelector, {
 } from "../components/NotificationSelector";
 import PrimaryButton from "../components/PrimaryButton";
 import ExerciseIcon from "../components/ExerciseIcon";
-import { Dog, Clock, ChevronLeft } from "lucide-react-native";
+import Header from "../components/Header";
+import DatePickerDrawer from "../components/DatePickerDrawer";
+import { Dog, Clock } from "lucide-react-native";
 
 interface AddEditExerciseScreenProps {
   exerciseId?: string;
@@ -46,6 +47,9 @@ export default function AddEditExerciseScreen({
   );
   const [type, setType] = useState<ExerciseType>(
     existingExercise?.type || "caminata"
+  );
+  const [customTypeDescription, setCustomTypeDescription] = useState(
+    existingExercise?.customTypeDescription || ""
   );
   const [durationMinutes, setDurationMinutes] = useState(
     existingExercise?.durationMinutes.toString() || "30"
@@ -103,16 +107,20 @@ export default function AddEditExerciseScreen({
   const exerciseTypes: ExerciseType[] = [
     "caminata",
     "cavaletti",
-    "natacion",
-    "carrera",
-    "juego",
-    "fisioterapia",
+    "balanceo",
+    "slalom",
+    "entrenamiento",
     "otro",
   ];
 
   const handleSave = async () => {
     if (!selectedDogId) {
       Alert.alert("Error", "Por favor selecciona un perro");
+      return;
+    }
+
+    if (type === "otro" && !customTypeDescription.trim()) {
+      Alert.alert("Error", "Por favor especifica el tipo de ejercicio");
       return;
     }
 
@@ -139,7 +147,7 @@ export default function AddEditExerciseScreen({
     let endDate: Date | undefined;
     if (!isPermanent) {
       endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + weeks * 7);
+      endDate.setDate(endDate.getDate() + weeks * 7 - 1);
     }
 
     const selectedDog = dogs.find((dog) => dog.id === selectedDogId);
@@ -154,6 +162,8 @@ export default function AddEditExerciseScreen({
         dogId: selectedDogId,
         dogName: selectedDog.name,
         type,
+        customTypeDescription:
+          type === "otro" ? customTypeDescription.trim() : undefined,
         durationMinutes: duration,
         timesPerDay: times,
         startTime,
@@ -189,30 +199,16 @@ export default function AddEditExerciseScreen({
   const commonFrequencies = [1, 2, 3, 4, 5, 6];
 
   return (
-    <SafeAreaView className="flex-1 bg-cyan-600" {...panResponder.panHandlers}>      <StatusBar barStyle="light-content" backgroundColor="#0891b2" />      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-2">
-          <TouchableOpacity
-            onPress={onNavigateBack}
-            className="mr-3 p-2 -ml-2"
-            activeOpacity={0.7}
-          >
-            <ChevronLeft
-              size={32}
-              color="white"
-              strokeWidth={2.5}
-              pointerEvents="none"
-            />
-              pointerEvents="none"
-            />
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            {isEditing ? "Editar Rutina" : "Nueva Rutina"}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView className="flex-1 bg-[#10B981]" {...panResponder.panHandlers}>
+      <Header
+        title={isEditing ? "Editar Rutina" : "Nueva Rutina"}
+        onBack={onNavigateBack}
+      />
 
-      <ScrollView className="flex-1 bg-white rounded-t-3xl px-6 pt-6">
+      <ScrollView
+        className="flex-1 bg-white rounded-t-3xl px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {/* Seleccionar Perro */}
         <View className="mb-4">
           <Text className="text-gray-700 font-semibold mb-2">Perro *</Text>
@@ -279,6 +275,22 @@ export default function AddEditExerciseScreen({
             ))}
           </View>
         </View>
+
+        {/* Campo de tipo personalizado si es "otro" */}
+        {type === "otro" && (
+          <View className="mb-4">
+            <Text className="text-gray-700 font-semibold mb-2">
+              ¿Qué tipo de ejercicio es? *
+            </Text>
+            <TextInput
+              value={customTypeDescription}
+              onChangeText={setCustomTypeDescription}
+              placeholder="Ej: Fisioterapia, Natación, etc."
+              className="bg-white px-4 py-3 rounded-xl border border-gray-300 text-gray-900"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        )}
 
         {/* Duración */}
         <View className="mb-4">
@@ -404,19 +416,6 @@ export default function AddEditExerciseScreen({
               })}
             </Text>
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (selectedDate) {
-                  setStartDate(selectedDate);
-                }
-              }}
-            />
-          )}
         </View>
 
         {/* Duración del tratamiento */}
@@ -522,6 +521,19 @@ export default function AddEditExerciseScreen({
           loading={saving}
         />
       </ScrollView>
+
+      {/* Date Picker Drawer */}
+      <DatePickerDrawer
+        visible={showDatePicker}
+        mode="date"
+        value={startDate}
+        onConfirm={(value) => {
+          setStartDate(value as Date);
+          setShowDatePicker(false);
+        }}
+        onCancel={() => setShowDatePicker(false)}
+        title="Seleccionar Fecha de Inicio"
+      />
     </SafeAreaView>
   );
 }

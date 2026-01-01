@@ -23,9 +23,6 @@ export async function testNotifications() {
     },
   });
 
-  console.log("✅ Notificación programada:", notificationId);
-  console.log("⏰ Llegará en 5 segundos");
-
   // Ver todas las notificaciones programadas
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   console.log("📋 Notificaciones programadas:", scheduled.length);

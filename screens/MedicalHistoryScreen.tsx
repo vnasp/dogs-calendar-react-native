@@ -5,6 +5,7 @@ import { useDogs } from "../context/DogsContext";
 import { useCalendar } from "../context/CalendarContext";
 import { useMedication } from "../context/MedicationContext";
 import { useExercise } from "../context/ExerciseContext";
+import Header from "../components/Header";
 
 interface MedicalHistoryScreenProps {
   dogId: string;
@@ -45,17 +46,7 @@ export default function MedicalHistoryScreen({
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-2">
-          <TouchableOpacity onPress={onNavigateBack} className="mr-3">
-            <Text className="text-white text-2xl">‹</Text>
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            Historial de {dog.name}
-          </Text>
-        </View>
-      </View>
+      <Header title={`Historial de ${dog.name}`} onBack={onNavigateBack} />
 
       <ScrollView className="flex-1 px-6 pt-6">
         {/* Información del perro */}

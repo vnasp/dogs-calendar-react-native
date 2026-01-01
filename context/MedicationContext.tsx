@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { supabase } from "../utils/supabase";
+import { supabase, formatLocalDate } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
 import {
@@ -15,16 +15,28 @@ import {
   requestNotificationPermissions,
 } from "../utils/notificationService";
 
+export type ScheduleType = "hours" | "meals";
+
 export interface Medication {
   id: string;
   dogId: string;
   dogName: string;
   name: string; // Nombre del medicamento
   dosage: string; // Dosis (ej: "1 comprimido")
-  frequencyHours: number; // Cada cuántas horas (8, 12, 24, etc.)
+
+  // Tipo de programación
+  scheduleType: ScheduleType;
+
+  // Para scheduleType="hours"
+  frequencyHours?: number; // Cada cuántas horas (8, 12, 24, etc.)
+  startTime?: string; // Hora de inicio (HH:mm)
+
+  // Para scheduleType="meals"
+  mealIds?: string[]; // IDs de las comidas seleccionadas
+
+  // Común para ambos
   durationDays: number; // Duración del tratamiento en días
   startDate: Date; // Fecha de inicio
-  startTime: string; // Hora de inicio (HH:mm)
   scheduledTimes: string[]; // Horarios calculados del día
   endDate: Date; // Fecha de fin (calculada automáticamente)
   notes?: string;
@@ -95,10 +107,25 @@ export function calculateMedicationTimes(
   return times;
 }
 
+// Función para calcular horarios desde comidas seleccionadas
+export function calculateMedicationTimesFromMeals(
+  mealIds: string[],
+  mealTimes: Array<{ id: string; time: string; order: number }>
+): string[] {
+  // Filtrar y ordenar las comidas seleccionadas
+  const selectedMeals = mealTimes
+    .filter((meal) => mealIds.includes(meal.id))
+    .sort((a, b) => a.order - b.order);
+
+  // Normalizar el formato a HH:mm (sin segundos)
+  return selectedMeals.map((meal) => meal.time.slice(0, 5));
+}
+
 // Función para calcular fecha de fin
 export function calculateEndDate(startDate: Date, durationDays: number): Date {
   const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + durationDays);
+  // Restar 1 porque el día de inicio ya cuenta como día 1
+  endDate.setDate(endDate.getDate() + durationDays - 1);
   return endDate;
 }
 
@@ -167,14 +194,14 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
       const medicationsWithDates = await Promise.all(
         (data || []).map(async (med: any) => {
           // Parsear fechas en la zona horaria local
-          const startDateParts = med.start_date.split('-');
+          const startDateParts = med.start_date.split("-");
           const startDate = new Date(
             parseInt(startDateParts[0]),
             parseInt(startDateParts[1]) - 1,
             parseInt(startDateParts[2])
           );
 
-          const endDateParts = med.end_date.split('-');
+          const endDateParts = med.end_date.split("-");
           const endDate = new Date(
             parseInt(endDateParts[0]),
             parseInt(endDateParts[1]) - 1,
@@ -187,10 +214,12 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
             dogName: med.dogs?.name || "",
             name: med.name,
             dosage: med.dosage,
+            scheduleType: (med.schedule_type || "hours") as ScheduleType,
             frequencyHours: med.frequency_hours,
+            startTime: med.start_time,
+            mealIds: med.meal_ids || [],
             durationDays: med.duration_days,
             startDate: startDate,
-            startTime: med.start_time,
             scheduledTimes: med.times || [],
             endDate: endDate,
             notes: med.notes,
@@ -209,7 +238,7 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
             const notificationIds = await scheduleMedicationNotifications(
               medication.id,
               medication.startDate,
-              medication.startTime,
+              medication.startTime || medication.scheduledTimes[0] || "08:00",
               medication.scheduledTimes,
               medication.durationDays,
               medication.dogName,
@@ -238,14 +267,6 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) throw new Error("No user authenticated");
 
-      // Formatear fechas para guardar en la BD (YYYY-MM-DD en zona horaria local)
-      const formatDateForDB = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       const { data, error } = await supabase
         .from("medications")
         .insert({
@@ -253,12 +274,14 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
           dog_id: medication.dogId,
           name: medication.name,
           dosage: medication.dosage,
-          frequency_hours: medication.frequencyHours,
+          schedule_type: medication.scheduleType,
+          frequency_hours: medication.frequencyHours || null,
+          start_time: medication.startTime || null,
+          meal_ids: medication.mealIds || null,
           duration_days: medication.durationDays,
-          start_date: formatDateForDB(medication.startDate),
-          start_time: medication.startTime,
+          start_date: formatLocalDate(medication.startDate),
           times: medication.scheduledTimes,
-          end_date: formatDateForDB(medication.endDate),
+          end_date: formatLocalDate(medication.endDate),
           notes: medication.notes,
           is_active: medication.isActive,
           notification_time: medication.notificationTime,
@@ -274,10 +297,12 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
         dogName: medication.dogName,
         name: data.name,
         dosage: data.dosage,
+        scheduleType: data.schedule_type as ScheduleType,
         frequencyHours: data.frequency_hours,
+        startTime: data.start_time,
+        mealIds: data.meal_ids || [],
         durationDays: data.duration_days,
         startDate: medication.startDate, // Usar la fecha original
-        startTime: data.start_time,
         scheduledTimes: data.times || [],
         endDate: medication.endDate, // Usar la fecha original
         notes: data.notes,
@@ -290,7 +315,7 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
       const notificationIds = await scheduleMedicationNotifications(
         newMedication.id,
         newMedication.startDate,
-        newMedication.startTime,
+        newMedication.startTime || newMedication.scheduledTimes[0] || "08:00",
         newMedication.scheduledTimes,
         newMedication.durationDays,
         newMedication.dogName,
@@ -326,26 +351,20 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
         await cancelMedicationNotifications(existingMedication.notificationIds);
       }
 
-      // Formatear fechas para guardar en la BD (YYYY-MM-DD en zona horaria local)
-      const formatDateForDB = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       const { error } = await supabase
         .from("medications")
         .update({
           dog_id: updatedMedication.dogId,
           name: updatedMedication.name,
           dosage: updatedMedication.dosage,
-          frequency_hours: updatedMedication.frequencyHours,
+          schedule_type: updatedMedication.scheduleType,
+          frequency_hours: updatedMedication.frequencyHours || null,
+          start_time: updatedMedication.startTime || null,
+          meal_ids: updatedMedication.mealIds || null,
           duration_days: updatedMedication.durationDays,
-          start_date: formatDateForDB(updatedMedication.startDate),
-          start_time: updatedMedication.startTime,
+          start_date: formatLocalDate(updatedMedication.startDate),
           times: updatedMedication.scheduledTimes,
-          end_date: formatDateForDB(updatedMedication.endDate),
+          end_date: formatLocalDate(updatedMedication.endDate),
           notes: updatedMedication.notes,
           is_active: updatedMedication.isActive,
           notification_time: updatedMedication.notificationTime,
@@ -358,7 +377,9 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
       const notificationIds = await scheduleMedicationNotifications(
         id,
         updatedMedication.startDate,
-        updatedMedication.startTime,
+        updatedMedication.startTime ||
+          updatedMedication.scheduledTimes[0] ||
+          "08:00",
         updatedMedication.scheduledTimes,
         updatedMedication.durationDays,
         updatedMedication.dogName,
@@ -461,16 +482,17 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
           item_type: "medication",
           item_id: medicationId,
           scheduled_time: scheduledTime,
-          completed_date: new Date().toISOString().split("T")[0],
+          completed_date: formatLocalDate(),
         });
 
         if (error) throw error;
+        await loadMedications();
       } catch (error) {
-        console.error("Error marking medication completed:", error);
+        console.error("Error marking medication as completed:", error);
         throw error;
       }
     },
-    [user]
+    [user, loadMedications]
   );
 
   const getTodayCompletions = useCallback(
@@ -479,7 +501,7 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
       scheduledTime: string
     ): Promise<Completion | null> => {
       try {
-        const today = new Date().toISOString().split("T")[0];
+        const today = formatLocalDate();
         const { data, error } = await supabase
           .from("completions")
           .select("*")

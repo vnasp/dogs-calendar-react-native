@@ -10,10 +10,9 @@ export default function DeleteButton({ onPress }: DeleteButtonProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="border border-purple-500 py-2 px-4 rounded-xl flex-row items-center justify-center"
+      className="border border-red-500 p-2 rounded-xl flex-row items-center justify-center"
     >
-      <Trash2 size={18} color="#a855f7" strokeWidth={2} pointerEvents="none" />
-      <Text className="text-purple-500 font-semibold ml-2">Eliminar</Text>
+      <Trash2 size={18} color="#ef4444" strokeWidth={2} pointerEvents="none" />
     </TouchableOpacity>
   );
 }

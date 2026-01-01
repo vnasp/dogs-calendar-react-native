@@ -8,23 +8,26 @@ import {
   Alert,
   Platform,
   PanResponder,
-  StatusBar,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   useCalendar,
   AppointmentType,
+  RecurrencePattern,
   appointmentTypeLabels,
   appointmentTypeColors,
   appointmentTypeIcons,
+  recurrenceLabels,
 } from "../context/CalendarContext";
 import { useDogs } from "../context/DogsContext";
-import { ChevronLeft } from "lucide-react-native";
+import Header from "../components/Header";
 import PrimaryButton from "../components/PrimaryButton";
 import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
+import DatePickerDrawer from "../components/DatePickerDrawer";
 
 interface AddEditAppointmentScreenProps {
   appointmentId?: string;
@@ -53,12 +56,31 @@ export default function AddEditAppointmentScreen({
   const [type, setType] = useState<AppointmentType>(
     existingAppointment?.type || "control"
   );
+  const [customTypeDescription, setCustomTypeDescription] = useState(
+    existingAppointment?.customTypeDescription || ""
+  );
   const [notes, setNotes] = useState(existingAppointment?.notes || "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
     existingAppointment?.notificationTime || "1day"
   );
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>(
+    existingAppointment?.recurrencePattern || "none"
+  );
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>(
+    existingAppointment?.recurrenceEndDate
+  );
+
+  // Estados para los modales
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showRecurrenceDrawer, setShowRecurrenceDrawer] = useState(false);
+  const [tempRecurrencePattern, setTempRecurrencePattern] =
+    useState(recurrencePattern);
+  const [tempRecurrenceEndDate, setTempRecurrenceEndDate] = useState<
+    Date | undefined
+  >(recurrenceEndDate);
+  const [showRecurrenceEndDatePicker, setShowRecurrenceEndDatePicker] =
+    useState(false);
   const [saving, setSaving] = useState(false);
 
   // Gesto de deslizar para regresar
@@ -77,8 +99,7 @@ export default function AddEditAppointmentScreen({
 
   const appointmentTypes: AppointmentType[] = [
     "control",
-    "radiografia",
-    "prequirurgico",
+    "examenes",
     "operacion",
     "fisioterapia",
     "vacuna",
@@ -89,6 +110,19 @@ export default function AddEditAppointmentScreen({
   const handleSave = async () => {
     if (!selectedDogId) {
       Alert.alert("Error", "Por favor selecciona un perro");
+      return;
+    }
+
+    if (type === "otro" && !customTypeDescription.trim()) {
+      Alert.alert("Error", "Por favor especifica el tipo de cita");
+      return;
+    }
+
+    if (recurrencePattern !== "none" && !recurrenceEndDate) {
+      Alert.alert(
+        "Error",
+        "Por favor especifica hasta cuándo se repetirá la cita"
+      );
       return;
     }
 
@@ -106,8 +140,13 @@ export default function AddEditAppointmentScreen({
         date,
         time,
         type,
+        customTypeDescription:
+          type === "otro" ? customTypeDescription.trim() : undefined,
         notes: notes.trim(),
         notificationTime,
+        recurrencePattern,
+        recurrenceEndDate:
+          recurrencePattern !== "none" ? recurrenceEndDate : undefined,
       };
 
       if (isEditing && appointmentId) {
@@ -124,21 +163,6 @@ export default function AddEditAppointmentScreen({
     }
   };
 
-  const formatDate = (date: Date) => {
-    const weekday = date.toLocaleDateString("es-ES", { weekday: "long" });
-    const day = date.getDate();
-    const month = date.toLocaleDateString("es-ES", { month: "long" });
-    const year = date.getFullYear();
-
-    // Capitalizar primera letra del día de la semana
-    const capitalizedWeekday =
-      weekday.charAt(0).toUpperCase() + weekday.slice(1);
-
-    return `${capitalizedWeekday} ${day} ${
-      month.charAt(0).toUpperCase() + month.slice(1)
-    } ${year}`;
-  };
-
   const formatTimeForPicker = (timeString: string) => {
     const [hours, minutes] = timeString.split(":");
     const date = new Date();
@@ -146,40 +170,47 @@ export default function AddEditAppointmentScreen({
     return date;
   };
 
-  const handleTimeChange = (event: any, selectedTime?: Date) => {
-    setShowTimePicker(Platform.OS === "ios");
-    if (selectedTime) {
-      const hours = selectedTime.getHours().toString().padStart(2, "0");
-      const minutes = selectedTime.getMinutes().toString().padStart(2, "0");
-      setTime(`${hours}:${minutes}`);
-    }
+  const formatTimeFromPicker = (date: Date) => {
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
+  const handleOpenRecurrenceDrawer = () => {
+    setTempRecurrencePattern(recurrencePattern);
+    setTempRecurrenceEndDate(recurrenceEndDate);
+    setShowRecurrenceDrawer(true);
+  };
+
+  const handleConfirmRecurrence = () => {
+    setRecurrencePattern(tempRecurrencePattern);
+    setRecurrenceEndDate(tempRecurrenceEndDate);
+    setShowRecurrenceDrawer(false);
+  };
+
+  const formatDateDisplay = (date: Date) => {
+    const weekday = date.toLocaleDateString("es-ES", { weekday: "long" });
+    const day = date.getDate();
+    const month = date.toLocaleDateString("es-ES", { month: "long" });
+    const year = date.getFullYear();
+    const capitalizedWeekday =
+      weekday.charAt(0).toUpperCase() + weekday.slice(1);
+    return `${capitalizedWeekday} ${day} ${
+      month.charAt(0).toUpperCase() + month.slice(1)
+    } ${year}`;
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cyan-600" {...panResponder.panHandlers}>
-      <StatusBar barStyle="light-content" backgroundColor="#0891b2" />
-      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-2">
-          <TouchableOpacity
-            onPress={onNavigateBack}
-            className="mr-3 p-2 -ml-2"
-            activeOpacity={0.7}
-          >
-            <ChevronLeft
-              size={32}
-              color="white"
-              strokeWidth={2.5}
-              pointerEvents="none"
-            />
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            {isEditing ? "Editar Cita" : "Nueva Cita"}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView className="flex-1 bg-[#10B981]" {...panResponder.panHandlers}>
+      <Header
+        title={isEditing ? "Editar Cita" : "Nueva Cita"}
+        onBack={onNavigateBack}
+      />
 
-      <ScrollView className="flex-1 bg-white rounded-t-3xl px-6 pt-6">
+      <ScrollView
+        className="flex-1 bg-white rounded-t-3xl px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {/* Seleccionar Perro */}
         <View className="mb-4">
           <Text className="text-gray-700 font-semibold mb-2">Perro *</Text>
@@ -214,18 +245,29 @@ export default function AddEditAppointmentScreen({
           <Text className="text-gray-700 font-semibold mb-2">
             Tipo de cita *
           </Text>
-          <View className="flex-row flex-wrap gap-2">
+          <View className="gap-2">
             {appointmentTypes.map((appointmentType) => (
               <TouchableOpacity
                 key={appointmentType}
                 onPress={() => setType(appointmentType)}
-                className={`px-4 py-3 rounded-xl flex-row items-center ${
+                className={`flex-row items-center p-4 rounded-xl ${
                   type === appointmentType
                     ? appointmentTypeColors[appointmentType] +
-                      " border-2 border-gray-400"
-                    : "bg-white"
+                      " border-2 border-green-500"
+                    : "bg-white border border-gray-300"
                 }`}
               >
+                <View
+                  className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                    type === appointmentType
+                      ? "border-green-600 bg-green-600"
+                      : "border-gray-400"
+                  }`}
+                >
+                  {type === appointmentType && (
+                    <View className="w-2 h-2 rounded-full bg-white" />
+                  )}
+                </View>
                 <Text className="text-xl mr-2">
                   {appointmentTypeIcons[appointmentType]}
                 </Text>
@@ -241,49 +283,200 @@ export default function AddEditAppointmentScreen({
           </View>
         </View>
 
-        {/* Fecha */}
-        <View className="mb-4">
-          <Text className="text-gray-700 font-semibold mb-2">Fecha *</Text>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            className="bg-white px-4 py-3 rounded-xl border border-gray-300"
-          >
-            <Text className="text-gray-900 text-base">{formatDate(date)}</Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (selectedDate) {
-                  setDate(selectedDate);
-                }
-              }}
+        {/* Campo de tipo personalizado si es "otro" */}
+        {type === "otro" && (
+          <View className="mb-4">
+            <Text className="text-gray-700 font-semibold mb-2">
+              ¿Qué tipo de cita es? *
+            </Text>
+            <TextInput
+              value={customTypeDescription}
+              onChangeText={setCustomTypeDescription}
+              placeholder="Ej: Peluquería, Grooming, etc."
+              className="bg-white px-4 py-3 rounded-xl border border-gray-300 text-gray-900"
+              placeholderTextColor="#9CA3AF"
             />
-          )}
+          </View>
+        )}
+
+        {/* Fecha y Hora */}
+        <View className="mb-4">
+          <Text className="text-gray-700 font-semibold mb-2">
+            Fecha y hora *
+          </Text>
+          <View className="gap-2">
+            {/* Selector de Fecha */}
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              className="bg-white px-4 py-3 rounded-xl border border-gray-300"
+            >
+              <Text className="text-gray-500 text-xs mb-1">Fecha</Text>
+              <Text className="text-gray-900 text-base font-semibold">
+                {formatDateDisplay(date)}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Selector de Hora */}
+            <TouchableOpacity
+              onPress={() => setShowTimePicker(true)}
+              className="bg-white px-4 py-3 rounded-xl border border-gray-300"
+            >
+              <Text className="text-gray-500 text-xs mb-1">Hora</Text>
+              <Text className="text-gray-900 text-base font-semibold">
+                {time}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Hora */}
+        {/* Recurrencia */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-semibold mb-2">Hora *</Text>
+          <Text className="text-gray-700 font-semibold mb-2">Repetir cita</Text>
           <TouchableOpacity
-            onPress={() => setShowTimePicker(true)}
+            onPress={handleOpenRecurrenceDrawer}
             className="bg-white px-4 py-3 rounded-xl border border-gray-300"
           >
-            <Text className="text-gray-900 text-base">{time}</Text>
+            <Text className="text-gray-900 text-base">
+              {recurrenceLabels[recurrencePattern]}
+            </Text>
+            {recurrencePattern !== "none" && recurrenceEndDate && (
+              <Text className="text-gray-600 text-sm mt-1">
+                Hasta el {formatDateDisplay(recurrenceEndDate)}
+              </Text>
+            )}
           </TouchableOpacity>
-          {showTimePicker && (
-            <DateTimePicker
-              value={formatTimeForPicker(time)}
-              mode="time"
-              is24Hour={true}
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleTimeChange}
-            />
-          )}
         </View>
+
+        {/* Modal Drawer para Recurrencia */}
+        <Modal
+          visible={showRecurrenceDrawer}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowRecurrenceDrawer(false)}
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View
+              className="bg-white rounded-t-3xl pb-8"
+              style={{ maxHeight: "85%" }}
+            >
+              <View className="p-6 border-b border-gray-200">
+                <Text className="text-lg font-bold text-gray-900 text-center">
+                  Configurar Repetición
+                </Text>
+              </View>
+              <ScrollView
+                className="px-6 pt-4"
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={true}
+              >
+                {/* Patrón de recurrencia */}
+                <View className="mb-4">
+                  <Text className="text-gray-700 font-semibold mb-2">
+                    Frecuencia
+                  </Text>
+                  <View className="gap-2">
+                    {(Object.keys(recurrenceLabels) as RecurrencePattern[]).map(
+                      (pattern) => (
+                        <TouchableOpacity
+                          key={pattern}
+                          onPress={() => {
+                            setTempRecurrencePattern(pattern);
+                            if (pattern === "none") {
+                              setTempRecurrenceEndDate(undefined);
+                            }
+                          }}
+                          className={`flex-row items-center p-4 rounded-xl ${
+                            tempRecurrencePattern === pattern
+                              ? "bg-green-100 border-2 border-green-500"
+                              : "bg-white border border-gray-300"
+                          }`}
+                        >
+                          <View
+                            className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
+                              tempRecurrencePattern === pattern
+                                ? "border-green-600 bg-green-600"
+                                : "border-gray-400"
+                            }`}
+                          >
+                            {tempRecurrencePattern === pattern && (
+                              <View className="w-2 h-2 rounded-full bg-white" />
+                            )}
+                          </View>
+                          <Text
+                            className={`font-semibold ${
+                              tempRecurrencePattern === pattern
+                                ? "text-gray-900"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {recurrenceLabels[pattern]}
+                          </Text>
+                        </TouchableOpacity>
+                      )
+                    )}
+                  </View>
+                </View>
+
+                {/* Fecha de fin si hay recurrencia */}
+                {tempRecurrencePattern !== "none" && (
+                  <View className="mb-4">
+                    <Text className="text-gray-700 font-semibold mb-2">
+                      Repetir hasta *
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowRecurrenceEndDatePicker(true)}
+                      className="bg-white px-4 py-3 rounded-xl border border-gray-300"
+                    >
+                      <Text className="text-gray-900 text-base">
+                        {tempRecurrenceEndDate
+                          ? formatDateDisplay(tempRecurrenceEndDate)
+                          : "Seleccionar fecha de fin"}
+                      </Text>
+                    </TouchableOpacity>
+                    {showRecurrenceEndDatePicker && (
+                      <View className="mt-4 mb-4">
+                        <DateTimePicker
+                          value={tempRecurrenceEndDate || new Date()}
+                          mode="date"
+                          display="spinner"
+                          minimumDate={
+                            new Date(date.getTime() + 24 * 60 * 60 * 1000)
+                          } // Mínimo 1 día después
+                          onChange={(event, selectedDate) => {
+                            if (selectedDate) {
+                              setTempRecurrenceEndDate(selectedDate);
+                              setShowRecurrenceEndDatePicker(false);
+                            }
+                          }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Botones */}
+                <View className="flex-row gap-3 mt-6 mb-4">
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowRecurrenceDrawer(false);
+                      setShowRecurrenceEndDatePicker(false);
+                    }}
+                    className="flex-1 bg-gray-200 py-4 rounded-xl"
+                    activeOpacity={0.7}
+                  >
+                    <Text className="text-gray-700 font-semibold text-center text-base">
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+                  <PrimaryButton
+                    onPress={handleConfirmRecurrence}
+                    text="Confirmar"
+                  />
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Recordatorio */}
         <View className="mb-4">
@@ -318,6 +511,32 @@ export default function AddEditAppointmentScreen({
           loading={saving}
         />
       </ScrollView>
+
+      {/* Date Picker Drawer para fecha */}
+      <DatePickerDrawer
+        visible={showDatePicker}
+        mode="date"
+        value={date}
+        onConfirm={(value) => {
+          setDate(value as Date);
+          setShowDatePicker(false);
+        }}
+        onCancel={() => setShowDatePicker(false)}
+        title="Seleccionar Fecha"
+      />
+
+      {/* Date Picker Drawer para hora */}
+      <DatePickerDrawer
+        visible={showTimePicker}
+        mode="time"
+        value={time}
+        onConfirm={(value) => {
+          setTime(value as string);
+          setShowTimePicker(false);
+        }}
+        onCancel={() => setShowTimePicker(false)}
+        title="Seleccionar Hora"
+      />
     </SafeAreaView>
   );
 }

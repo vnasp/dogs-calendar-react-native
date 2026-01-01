@@ -22,12 +22,14 @@ import MedicationsListScreen from "./screens/MedicationsListScreen";
 import AddEditMedicationScreen from "./screens/AddEditMedicationScreen";
 import MedicalHistoryScreen from "./screens/MedicalHistoryScreen";
 import SharedAccessScreen from "./screens/SharedAccessScreen";
+import MealTimesSettingsScreen from "./screens/MealTimesSettingsScreen";
 import Footer from "./components/Footer";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DogsProvider } from "./context/DogsContext";
 import { CalendarProvider } from "./context/CalendarContext";
 import { ExerciseProvider } from "./context/ExerciseContext";
 import { MedicationProvider } from "./context/MedicationContext";
+import { MealTimesProvider } from "./context/MealTimesContext";
 import { SharedAccessProvider } from "./context/SharedAccessContext";
 import "./global.css";
 
@@ -43,7 +45,8 @@ type Screen =
   | "medications"
   | "addEditMedication"
   | "medicalHistory"
-  | "sharedAccess";
+  | "sharedAccess"
+  | "mealTimesSettings";
 
 function MainApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -101,6 +104,7 @@ function MainApp() {
   };
 
   const navigateToSharedAccess = () => setCurrentScreen("sharedAccess");
+  const navigateToMealTimes = () => setCurrentScreen("mealTimesSettings");
 
   const renderScreen = () => {
     if (authLoading) {
@@ -128,6 +132,7 @@ function MainApp() {
             onNavigateToAddEdit={navigateToAddEditDog}
             onNavigateBack={navigateToHome}
             onNavigateToMedicalHistory={navigateToMedicalHistory}
+            onNavigateToMealTimes={navigateToMealTimes}
           />
         );
       case "addEditDog":
@@ -195,6 +200,12 @@ function MainApp() {
             }}
           />
         );
+      case "mealTimesSettings":
+        return (
+          <MealTimesSettingsScreen
+            onNavigateBack={() => setCurrentScreen("dogsList")}
+          />
+        );
       default:
         return (
           <HomeScreen
@@ -214,20 +225,22 @@ function MainApp() {
         <CalendarProvider>
           <ExerciseProvider>
             <MedicationProvider>
-              <SharedAccessProvider>
-                {renderScreen()}
-                {user && (
-                  <Footer
-                    currentScreen={currentScreen}
-                    onNavigateToHome={navigateToHome}
-                    onNavigateToDogsList={navigateToDogsList}
-                    onNavigateToCalendar={navigateToCalendar}
-                    onNavigateToMedications={navigateToMedications}
-                    onNavigateToExercises={navigateToExercises}
-                  />
-                )}
-                <StatusBar style="light" backgroundColor="#0891b2" />
-              </SharedAccessProvider>
+              <MealTimesProvider>
+                <SharedAccessProvider>
+                  {renderScreen()}
+                  {user && (
+                    <Footer
+                      currentScreen={currentScreen}
+                      onNavigateToHome={navigateToHome}
+                      onNavigateToDogsList={navigateToDogsList}
+                      onNavigateToCalendar={navigateToCalendar}
+                      onNavigateToMedications={navigateToMedications}
+                      onNavigateToExercises={navigateToExercises}
+                    />
+                  )}
+                  <StatusBar style="light" backgroundColor="#0891b2" />
+                </SharedAccessProvider>
+              </MealTimesProvider>
             </MedicationProvider>
           </ExerciseProvider>
         </CalendarProvider>

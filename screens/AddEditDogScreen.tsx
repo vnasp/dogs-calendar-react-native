@@ -9,14 +9,14 @@ import {
   Alert,
   Platform,
   PanResponder,
-  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useDogs } from "../context/DogsContext";
-import { ChevronLeft } from "lucide-react-native";
+import Header from "../components/Header";
 import PrimaryButton from "../components/PrimaryButton";
+import DatePickerDrawer from "../components/DatePickerDrawer";
 
 interface AddEditDogScreenProps {
   dogId?: string;
@@ -137,30 +137,16 @@ export default function AddEditDogScreen({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cyan-600" {...panResponder.panHandlers}>
-      <StatusBar barStyle="light-content" backgroundColor="#0891b2" />
-      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-2">
-          <TouchableOpacity
-            onPress={onNavigateBack}
-            className="mr-3 p-2 -ml-2"
-            activeOpacity={0.7}
-          >
-            <ChevronLeft
-              size={32}
-              color="white"
-              strokeWidth={2.5}
-              pointerEvents="none"
-            />
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            {isEditing ? "Editar Perro" : "Agregar Perro"}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView className="flex-1 bg-[#10B981]" {...panResponder.panHandlers}>
+      <Header
+        title={isEditing ? "Editar Perro" : "Agregar Perro"}
+        onBack={onNavigateBack}
+      />
 
-      <ScrollView className="flex-1 bg-white rounded-t-3xl px-6 pt-6">
+      <ScrollView
+        className="flex-1 bg-white rounded-t-3xl px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {/* Foto */}
         <View className="items-center mb-6">
           <TouchableOpacity onPress={pickImage}>
@@ -219,20 +205,6 @@ export default function AddEditDogScreen({
           >
             <Text className="text-gray-900">{formatDate(birthDate)}</Text>
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={birthDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (selectedDate) {
-                  setBirthDate(selectedDate);
-                }
-              }}
-              maximumDate={new Date()}
-            />
-          )}
         </View>
 
         {/* Género */}
@@ -279,7 +251,7 @@ export default function AddEditDogScreen({
             <TouchableOpacity
               onPress={() => setIsNeutered(true)}
               className={`flex-1 py-3 rounded-xl ${
-                isNeutered ? "bg-green-500" : "bg-white"
+                isNeutered ? "bg-[#0F7D63]" : "bg-white"
               }`}
             >
               <Text
@@ -314,6 +286,20 @@ export default function AddEditDogScreen({
           loading={saving}
         />
       </ScrollView>
+
+      {/* Date Picker Drawer */}
+      <DatePickerDrawer
+        visible={showDatePicker}
+        mode="date"
+        value={birthDate}
+        onConfirm={(value) => {
+          setBirthDate(value as Date);
+          setShowDatePicker(false);
+        }}
+        onCancel={() => setShowDatePicker(false)}
+        title="Seleccionar Fecha de Nacimiento"
+        maximumDate={new Date()}
+      />
     </SafeAreaView>
   );
 }

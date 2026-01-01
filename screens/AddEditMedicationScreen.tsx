@@ -8,22 +8,26 @@ import {
   Alert,
   Platform,
   PanResponder,
-  StatusBar,
   KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   useMedication,
   calculateMedicationTimes,
+  calculateMedicationTimesFromMeals,
   calculateEndDate,
+  ScheduleType,
 } from "../context/MedicationContext";
+import { useMealTimes } from "../context/MealTimesContext";
 import { useDogs } from "../context/DogsContext";
-import { ChevronLeft } from "lucide-react-native";
+import { Clock, Utensils } from "lucide-react-native";
+import Header from "../components/Header";
 import NotificationSelector, {
   NotificationTime,
 } from "../components/NotificationSelector";
 import PrimaryButton from "../components/PrimaryButton";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import DatePickerDrawer from "../components/DatePickerDrawer";
 
 interface AddEditMedicationScreenProps {
   medicationId?: string;
@@ -36,6 +40,7 @@ export default function AddEditMedicationScreen({
 }: AddEditMedicationScreenProps) {
   const { addMedication, updateMedication, getMedicationById } =
     useMedication();
+  const { mealTimes } = useMealTimes();
   const { dogs } = useDogs();
   const isEditing = !!medicationId;
   const existingMedication = medicationId
@@ -47,17 +52,30 @@ export default function AddEditMedicationScreen({
   );
   const [name, setName] = useState(existingMedication?.name || "");
   const [dosage, setDosage] = useState(existingMedication?.dosage || "");
-  const [frequencyHours, setFrequencyHours] = useState(
-    existingMedication?.frequencyHours.toString() || "8"
+
+  // Nuevo: Tipo de programación
+  const [scheduleType, setScheduleType] = useState<ScheduleType>(
+    existingMedication?.scheduleType || "hours"
   );
+
+  // Para scheduleType="hours"
+  const [frequencyHours, setFrequencyHours] = useState(
+    existingMedication?.frequencyHours?.toString() || "8"
+  );
+  const [startTime, setStartTime] = useState(
+    existingMedication?.startTime || "08:00"
+  );
+
+  // Para scheduleType="meals"
+  const [selectedMealIds, setSelectedMealIds] = useState<string[]>(
+    existingMedication?.mealIds || []
+  );
+
   const [durationDays, setDurationDays] = useState(
     existingMedication?.durationDays.toString() || "30"
   );
   const [startDate, setStartDate] = useState(
     existingMedication?.startDate || new Date()
-  );
-  const [startTime, setStartTime] = useState(
-    existingMedication?.startTime || "08:00"
   );
   const [notes, setNotes] = useState(existingMedication?.notes || "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
@@ -88,19 +106,41 @@ export default function AddEditMedicationScreen({
   const [endDate, setEndDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    const freq = parseInt(frequencyHours);
     const duration = parseInt(durationDays);
 
-    if (!isNaN(freq) && freq > 0 && freq <= 24) {
-      const times = calculateMedicationTimes(startTime, freq);
-      setScheduledTimes(times);
+    // Calcular scheduledTimes según el tipo de programación
+    if (scheduleType === "hours") {
+      const freq = parseInt(frequencyHours);
+      if (!isNaN(freq) && freq > 0 && freq <= 24) {
+        const times = calculateMedicationTimes(startTime, freq);
+        setScheduledTimes(times);
+      }
+    } else if (scheduleType === "meals") {
+      if (selectedMealIds.length > 0) {
+        const times = calculateMedicationTimesFromMeals(
+          selectedMealIds,
+          mealTimes
+        );
+        setScheduledTimes(times);
+      } else {
+        setScheduledTimes([]);
+      }
     }
 
+    // Calcular fecha de fin
     if (!isNaN(duration) && duration > 0) {
       const calculatedEndDate = calculateEndDate(startDate, duration);
       setEndDate(calculatedEndDate);
     }
-  }, [startTime, frequencyHours, durationDays, startDate]);
+  }, [
+    scheduleType,
+    startTime,
+    frequencyHours,
+    selectedMealIds,
+    mealTimes,
+    durationDays,
+    startDate,
+  ]);
 
   const commonFrequencies = [6, 8, 12, 24];
   const commonDurations = [3, 7, 20, 30];
@@ -121,17 +161,24 @@ export default function AddEditMedicationScreen({
       return;
     }
 
-    const freq = parseInt(frequencyHours);
-    const duration = parseInt(durationDays);
-
-    if (isNaN(freq) || freq <= 0 || freq > 24) {
-      Alert.alert(
-        "Error",
-        "Por favor ingresa una frecuencia válida (1-24 horas)"
-      );
-      return;
+    // Validaciones según tipo de programación
+    if (scheduleType === "hours") {
+      const freq = parseInt(frequencyHours);
+      if (isNaN(freq) || freq <= 0 || freq > 24) {
+        Alert.alert(
+          "Error",
+          "Por favor ingresa una frecuencia válida (1-24 horas)"
+        );
+        return;
+      }
+    } else if (scheduleType === "meals") {
+      if (selectedMealIds.length === 0) {
+        Alert.alert("Error", "Por favor selecciona al menos una comida");
+        return;
+      }
     }
 
+    const duration = parseInt(durationDays);
     if (isNaN(duration) || duration < 0) {
       Alert.alert("Error", "Por favor ingresa una duración válida");
       return;
@@ -150,10 +197,13 @@ export default function AddEditMedicationScreen({
         dogName: selectedDog.name,
         name: name.trim(),
         dosage: dosage.trim(),
-        frequencyHours: freq,
-        durationDays: duration,
+        scheduleType,
+        frequencyHours:
+          scheduleType === "hours" ? parseInt(frequencyHours) : undefined,
+        startTime: scheduleType === "hours" ? startTime : undefined,
+        mealIds: scheduleType === "meals" ? selectedMealIds : undefined,
+        durationDays: parseInt(durationDays),
         startDate,
-        startTime,
         scheduledTimes,
         endDate,
         notes: notes.trim(),
@@ -192,28 +242,11 @@ export default function AddEditMedicationScreen({
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-cyan-600" {...panResponder.panHandlers}>
-      <StatusBar barStyle="light-content" backgroundColor="#0891b2" />
-      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center mb-2">
-          <TouchableOpacity
-            onPress={onNavigateBack}
-            className="mr-3 p-2 -ml-2"
-            activeOpacity={0.7}
-          >
-            <ChevronLeft
-              size={32}
-              color="white"
-              strokeWidth={2.5}
-              pointerEvents="none"
-            />
-          </TouchableOpacity>
-          <Text className="text-white text-2xl font-bold flex-1">
-            {isEditing ? "Editar Medicamento" : "Nuevo Medicamento"}
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView className="flex-1 bg-[#10B981]" {...panResponder.panHandlers}>
+      <Header
+        title={isEditing ? "Editar Medicamento" : "Nuevo Medicamento"}
+        onBack={onNavigateBack}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -280,45 +313,246 @@ export default function AddEditMedicationScreen({
             />
           </View>
 
-          {/* Frecuencia */}
+          {/* Tipo de programación */}
           <View className="mb-4">
             <Text className="text-gray-700 font-semibold mb-2">
-              Cada cuántas horas *
+              ¿Cómo se programa? *
             </Text>
-            {/* Botones rápidos */}
-            <View className="flex-row flex-wrap gap-2 mb-3">
-              {commonFrequencies.map((freq) => (
-                <TouchableOpacity
-                  key={freq}
-                  onPress={() => setFrequencyHours(freq.toString())}
-                  className={`px-4 py-2 rounded-lg ${
-                    frequencyHours === freq.toString()
-                      ? "bg-pink-500"
-                      : "bg-white"
-                  }`}
-                >
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setScheduleType("hours")}
+                className={`flex-1 p-4 rounded-xl border-2 ${
+                  scheduleType === "hours"
+                    ? "bg-pink-50 border-pink-500"
+                    : "bg-white border-gray-300"
+                }`}
+                activeOpacity={0.7}
+              >
+                <View className="items-center">
+                  <Clock
+                    size={28}
+                    color={scheduleType === "hours" ? "#ec4899" : "#6B7280"}
+                    strokeWidth={2}
+                  />
                   <Text
-                    className={`font-semibold ${
-                      frequencyHours === freq.toString()
-                        ? "text-white"
+                    className={`font-semibold mt-2 ${
+                      scheduleType === "hours"
+                        ? "text-pink-700"
                         : "text-gray-700"
                     }`}
                   >
-                    Cada {freq}h
+                    Cada X horas
                   </Text>
-                </TouchableOpacity>
-              ))}
+                  <Text
+                    className={`text-xs mt-1 text-center ${
+                      scheduleType === "hours"
+                        ? "text-pink-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Horario preciso
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setScheduleType("meals")}
+                className={`flex-1 p-4 rounded-xl border-2 ${
+                  scheduleType === "meals"
+                    ? "bg-pink-50 border-pink-500"
+                    : "bg-white border-gray-300"
+                }`}
+                activeOpacity={0.7}
+              >
+                <View className="items-center">
+                  <Utensils
+                    size={28}
+                    color={scheduleType === "meals" ? "#ec4899" : "#6B7280"}
+                    strokeWidth={2}
+                  />
+                  <Text
+                    className={`font-semibold mt-2 ${
+                      scheduleType === "meals"
+                        ? "text-pink-700"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    Con comidas
+                  </Text>
+                  <Text
+                    className={`text-xs mt-1 text-center ${
+                      scheduleType === "meals"
+                        ? "text-pink-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Flexible
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
-            {/* Input manual */}
-            <TextInput
-              value={frequencyHours}
-              onChangeText={setFrequencyHours}
-              keyboardType="numeric"
-              placeholder="Ej: 8"
-              className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
-              placeholderTextColor="#9CA3AF"
-            />
           </View>
+
+          {/* Configuración según tipo - CADA X HORAS */}
+          {scheduleType === "hours" && (
+            <>
+              {/* Frecuencia */}
+              <View className="mb-4">
+                <Text className="text-gray-700 font-semibold mb-2">
+                  Cada cuántas horas *
+                </Text>
+                {/* Botones rápidos */}
+                <View className="flex-row flex-wrap gap-2 mb-3">
+                  {commonFrequencies.map((freq) => (
+                    <TouchableOpacity
+                      key={freq}
+                      onPress={() => setFrequencyHours(freq.toString())}
+                      className={`px-4 py-2 rounded-lg ${
+                        frequencyHours === freq.toString()
+                          ? "bg-pink-500"
+                          : "bg-white"
+                      }`}
+                    >
+                      <Text
+                        className={`font-semibold ${
+                          frequencyHours === freq.toString()
+                            ? "text-white"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        Cada {freq}h
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {/* Input manual */}
+                <TextInput
+                  value={frequencyHours}
+                  onChangeText={setFrequencyHours}
+                  keyboardType="numeric"
+                  placeholder="Ej: 8"
+                  className="bg-white px-4 py-3 rounded-xl text-gray-900 border border-gray-300"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              {/* Hora de inicio */}
+              <View className="mb-4">
+                <Text className="text-gray-700 font-semibold mb-2">
+                  Hora de inicio *
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowTimePicker(true)}
+                  className="bg-white px-4 py-3 rounded-xl border border-gray-300"
+                >
+                  <Text className="text-gray-900 text-base">{startTime}</Text>
+                </TouchableOpacity>
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={(() => {
+                      const [hours, minutes] = startTime.split(":");
+                      const date = new Date();
+                      date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                      return date;
+                    })()}
+                    mode="time"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={(event, selectedDate) => {
+                      setShowTimePicker(Platform.OS === "ios");
+                      if (selectedDate) {
+                        const hours = selectedDate
+                          .getHours()
+                          .toString()
+                          .padStart(2, "0");
+                        const minutes = selectedDate
+                          .getMinutes()
+                          .toString()
+                          .padStart(2, "0");
+                        setStartTime(`${hours}:${minutes}`);
+                      }
+                    }}
+                  />
+                )}
+              </View>
+            </>
+          )}
+
+          {/* Configuración según tipo - CON COMIDAS */}
+          {scheduleType === "meals" && (
+            <View className="mb-4">
+              <Text className="text-gray-700 font-semibold mb-2">
+                Seleccionar comidas *
+              </Text>
+
+              {mealTimes.length === 0 ? (
+                <View className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                  <Text className="text-amber-900 font-semibold mb-2">
+                    ⚠️ No hay comidas configuradas
+                  </Text>
+                  <Text className="text-amber-700 text-sm">
+                    Configura los horarios de comida en Settings para usar esta
+                    opción.
+                  </Text>
+                </View>
+              ) : (
+                <View className="gap-2">
+                  {mealTimes.map((meal, index) => {
+                    const isSelected = selectedMealIds.includes(meal.id);
+                    return (
+                      <TouchableOpacity
+                        key={meal.id}
+                        onPress={() => {
+                          if (isSelected) {
+                            setSelectedMealIds(
+                              selectedMealIds.filter((id) => id !== meal.id)
+                            );
+                          } else {
+                            setSelectedMealIds([...selectedMealIds, meal.id]);
+                          }
+                        }}
+                        className={`flex-row items-center p-4 rounded-xl border-2 ${
+                          isSelected
+                            ? "bg-pink-50 border-pink-500"
+                            : "bg-white border-gray-300"
+                        }`}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          className={`w-6 h-6 rounded-full border-2 items-center justify-center mr-3 ${
+                            isSelected
+                              ? "bg-pink-500 border-pink-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {isSelected && (
+                            <Text className="text-white font-bold text-xs">
+                              ✓
+                            </Text>
+                          )}
+                        </View>
+                        <View className="flex-1">
+                          <Text
+                            className={`font-semibold ${
+                              isSelected ? "text-pink-700" : "text-gray-900"
+                            }`}
+                          >
+                            {index + 1}. {meal.name}
+                          </Text>
+                          <Text
+                            className={`text-sm ${
+                              isSelected ? "text-pink-600" : "text-gray-600"
+                            }`}
+                          >
+                            {meal.time}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Duración */}
           <View className="mb-4">
@@ -393,52 +627,6 @@ export default function AddEditMedicationScreen({
                 📅 {formatDate(startDate)}
               </Text>
             </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={startDate}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(Platform.OS === "ios");
-                  if (selectedDate) {
-                    setStartDate(selectedDate);
-                  }
-                }}
-              />
-            )}
-          </View>
-
-          {/* Hora de inicio */}
-          <View className="mb-4">
-            <Text className="text-gray-700 font-semibold mb-2">
-              Hora de inicio (primera dosis) *
-            </Text>
-            <TouchableOpacity
-              onPress={() => setShowTimePicker(true)}
-              className="bg-white px-4 py-3 rounded-xl border border-gray-300"
-            >
-              <Text className="text-gray-900 text-base">🕐 {startTime}</Text>
-            </TouchableOpacity>
-            {showTimePicker && (
-              <DateTimePicker
-                value={new Date(`2000-01-01T${startTime}:00`)}
-                mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                is24Hour={true}
-                onChange={(event, selectedTime) => {
-                  setShowTimePicker(Platform.OS === "ios");
-                  if (selectedTime) {
-                    const hours = selectedTime.getHours();
-                    const minutes = selectedTime.getMinutes();
-                    setStartTime(
-                      `${hours.toString().padStart(2, "0")}:${minutes
-                        .toString()
-                        .padStart(2, "0")}`
-                    );
-                  }
-                }}
-              />
-            )}
           </View>
 
           {/* Información calculada */}
@@ -448,7 +636,8 @@ export default function AddEditMedicationScreen({
                 📋 Resumen del tratamiento
               </Text>
               <Text className="text-gray-700 mb-2">
-                🕒 Horarios diarios: {scheduledTimes.join(", ")}
+                {scheduleType === "hours" ? "⏰" : "🍽️"} Horarios diarios:{" "}
+                {scheduledTimes.join(", ")}
               </Text>
               {durationDays !== "0" ? (
                 <>
@@ -456,12 +645,14 @@ export default function AddEditMedicationScreen({
                     📅 Fecha de fin: {formatDate(endDate)}
                   </Text>
                   <Text className="text-blue-600 font-semibold">
-                    {scheduledTimes.length}x al día durante {durationDays} días
+                    {scheduledTimes.length}x al día durante {durationDays} días{" "}
+                    {scheduleType === "meals" && "• Con comidas"}
                   </Text>
                 </>
               ) : (
                 <Text className="text-blue-600 font-semibold">
                   {scheduledTimes.length}x al día • Tratamiento continuo
+                  {scheduleType === "meals" && " • Con comidas"}
                 </Text>
               )}
             </View>
@@ -501,6 +692,19 @@ export default function AddEditMedicationScreen({
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Date Picker Drawer */}
+      <DatePickerDrawer
+        visible={showDatePicker}
+        mode="date"
+        value={startDate}
+        onConfirm={(value) => {
+          setStartDate(value as Date);
+          setShowDatePicker(false);
+        }}
+        onCancel={() => setShowDatePicker(false)}
+        title="Seleccionar Fecha de Inicio"
+      />
     </SafeAreaView>
   );
 }

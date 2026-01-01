@@ -1,12 +1,11 @@
 import React from "react";
 import {
   Footprints,
-  Waves,
-  Zap,
+  Activity,
   CircleDot,
   Dumbbell,
-  Heart,
-  Activity,
+  Waypoints,
+  Award,
 } from "lucide-react-native";
 import { ExerciseType } from "../context/ExerciseContext";
 
@@ -28,14 +27,12 @@ export default function ExerciseIcon({
       return <Footprints size={size} color={color} strokeWidth={strokeWidth} />;
     case "cavaletti":
       return <Activity size={size} color={color} strokeWidth={strokeWidth} />;
-    case "natacion":
-      return <Waves size={size} color={color} strokeWidth={strokeWidth} />;
-    case "carrera":
-      return <Zap size={size} color={color} strokeWidth={strokeWidth} />;
-    case "juego":
+    case "balanceo":
       return <CircleDot size={size} color={color} strokeWidth={strokeWidth} />;
-    case "fisioterapia":
-      return <Heart size={size} color={color} strokeWidth={strokeWidth} />;
+    case "slalom":
+      return <Waypoints size={size} color={color} strokeWidth={strokeWidth} />;
+    case "entrenamiento":
+      return <Award size={size} color={color} strokeWidth={strokeWidth} />;
     case "otro":
       return <Dumbbell size={size} color={color} strokeWidth={strokeWidth} />;
     default:

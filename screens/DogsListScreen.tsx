@@ -10,7 +10,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDogs } from "../context/DogsContext";
 import Logo from "../components/Logo";
-import HeaderAddButton from "../components/HeaderAddButton";
+import Header from "../components/Header";
+import HeaderIcon from "../components/HeaderIcon";
+import { Clock, Pencil, Trash2, Plus } from "lucide-react-native";
 import EditButton from "../components/EditButton";
 import DeleteButton from "../components/DeleteButton";
 
@@ -18,12 +20,14 @@ interface DogsListScreenProps {
   onNavigateToAddEdit: (dogId?: string) => void;
   onNavigateBack: () => void;
   onNavigateToMedicalHistory: (dogId: string) => void;
+  onNavigateToMealTimes: () => void;
 }
 
 export default function DogsListScreen({
   onNavigateToAddEdit,
   onNavigateBack,
   onNavigateToMedicalHistory,
+  onNavigateToMealTimes,
 }: DogsListScreenProps) {
   const { dogs, deleteDog } = useDogs();
 
@@ -54,7 +58,7 @@ export default function DogsListScreen({
 
   return (
     <SafeAreaView
-      className="flex-1 bg-cyan-600"
+      className="flex-1 bg-[#10B981]"
       edges={["top", "left", "right"]}
     >
       <ScrollView
@@ -62,14 +66,13 @@ export default function DogsListScreen({
         contentContainerStyle={{ paddingBottom: 100 }}
         style={{ flex: 1 }}
       >
-        {/* Header */}
-        <View className="bg-cyan-600 pt-6 pb-6 px-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Logo />
-            <HeaderAddButton onPress={() => onNavigateToAddEdit()} />
-          </View>
-          <Text className="text-white text-xl font-bold">Mis Perros</Text>
-        </View>
+        <Header
+          leftButton={<Logo />}
+          rightButton={
+            <HeaderIcon Icon={Plus} onPress={() => onNavigateToAddEdit()} />
+          }
+          subtitle="Mis Perros"
+        />
 
         {/* Contenido con redondeado superior */}
         <View className="flex-1 bg-gray-50 rounded-t-3xl -mt-4 px-6 pt-6">
@@ -142,17 +145,31 @@ export default function DogsListScreen({
                         )}
                       </View>
                     </View>
-                  </View>
 
-                  {/* Botones de acción */}
-                  <View className="flex-row gap-2 mt-4">
-                    <View className="flex-1">
+                    {/* Botones de acción - columna derecha */}
+                    <View className="gap-2 ml-3">
                       <EditButton onPress={() => onNavigateToAddEdit(dog.id)} />
-                    </View>
-                    <View className="flex-1">
                       <DeleteButton
                         onPress={() => handleDelete(dog.id, dog.name)}
                       />
+                    </View>
+                  </View>
+
+                  {/* Opciones */}
+                  <View className="mt-4">
+                    <Text className="text-gray-600 text-xs font-semibold uppercase mb-2">
+                      Opciones
+                    </Text>
+                    <View className="gap-2">
+                      <TouchableOpacity
+                        className="border-2 border-[#0F7D63] p-2 rounded-xl flex-row items-center justify-center"
+                        onPress={onNavigateToMealTimes}
+                      >
+                        <Clock size={20} color="#0F7D63" strokeWidth={2} />
+                        <Text className="text-[#0F7D63] font-semibold ml-2">
+                          Horarios de Comida
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>

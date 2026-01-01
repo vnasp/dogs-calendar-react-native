@@ -21,13 +21,17 @@ CREATE TABLE appointments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   dog_id UUID REFERENCES dogs(id) ON DELETE CASCADE NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('control', 'radiografia', 'prequirurgico', 'operacion', 'fisioterapia', 'vacuna', 'desparasitacion', 'otro')),
+  type TEXT NOT NULL CHECK (type IN ('control', 'examenes', 'operacion', 'fisioterapia', 'vacuna', 'desparasitacion', 'otro')),
   title TEXT NOT NULL,
   date TEXT NOT NULL,
   time TEXT NOT NULL,
   location TEXT,
   notes TEXT,
   notification_time TEXT,
+  custom_type_description TEXT,
+  recurrence_pattern TEXT CHECK (recurrence_pattern IN ('daily', 'weekly', 'biweekly', 'monthly', 'none')),
+  recurrence_end_date TEXT,
+  recurrence_parent_id UUID REFERENCES appointments(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -93,6 +97,7 @@ CREATE INDEX dogs_user_id_idx ON dogs(user_id);
 CREATE INDEX appointments_user_id_idx ON appointments(user_id);
 CREATE INDEX appointments_dog_id_idx ON appointments(dog_id);
 CREATE INDEX appointments_date_idx ON appointments(date);
+CREATE INDEX appointments_recurrence_parent_id_idx ON appointments(recurrence_parent_id);
 CREATE INDEX medications_user_id_idx ON medications(user_id);
 CREATE INDEX medications_dog_id_idx ON medications(dog_id);
 CREATE INDEX medications_is_active_idx ON medications(is_active);

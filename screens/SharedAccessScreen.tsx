@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSharedAccess } from "../context/SharedAccessContext";
+import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 export default function SharedAccessScreen({ navigation }: any) {
@@ -93,26 +94,8 @@ export default function SharedAccessScreen({ navigation }: any) {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-cyan-600">
-      {/* Header */}
-      <View className="bg-cyan-600 pt-6 pb-6 px-6">
-        <View className="flex-row items-center justify-between mb-2">
-          <View className="flex-row items-center flex-1">
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="mr-3"
-            >
-              <Text className="text-white text-2xl">‹</Text>
-            </TouchableOpacity>
-            <Text className="text-white text-2xl font-bold">
-              Acceso Compartido
-            </Text>
-          </View>
-        </View>
-        <Text className="text-cyan-100 text-base mt-2">
-          Comparte el calendario de tus perros con tu pareja o familia
-        </Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-[#10B981]">
+      <Header title="Acceso Compartido" onBack={() => navigation.goBack()} />
 
       <ScrollView className="flex-1 bg-white rounded-t-3xl px-4 pt-6">
         {/* Enviar invitación */}
@@ -165,7 +148,7 @@ export default function SharedAccessScreen({ navigation }: any) {
                 </Text>
                 <View className="flex-row gap-2">
                   <TouchableOpacity
-                    className="flex-1 bg-green-500 rounded-lg py-2"
+                    className="flex-1 bg-[#0F7D63] rounded-lg py-2"
                     onPress={() => handleAccept(invitation.id)}
                   >
                     <Text className="text-white text-center font-semibold">
