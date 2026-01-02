@@ -52,10 +52,10 @@ export default function AddEditExerciseScreen({
     existingExercise?.customTypeDescription || ""
   );
   const [durationMinutes, setDurationMinutes] = useState(
-    existingExercise?.durationMinutes.toString() || "30"
+    existingExercise?.durationMinutes?.toString() || "30"
   );
   const [timesPerDay, setTimesPerDay] = useState(
-    existingExercise?.timesPerDay.toString() || "1"
+    existingExercise?.timesPerDay?.toString() || "1"
   );
   const [startTime, setStartTime] = useState(
     existingExercise?.startTime || "07:00"
@@ -94,15 +94,37 @@ export default function AddEditExerciseScreen({
   ).current;
 
   // Calcular horarios automáticamente cuando cambian los parámetros
-  const [scheduledTimes, setScheduledTimes] = useState<string[]>([]);
+  const [scheduledTimes, setScheduledTimes] = useState<string[]>(
+    existingExercise?.scheduledTimes || []
+  );
+  const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
+  const [showTimePickerForIndex, setShowTimePickerForIndex] = useState(false);
+  const [hasManualEdits, setHasManualEdits] = useState(
+    !!existingExercise?.scheduledTimes?.length
+  );
 
   useEffect(() => {
-    const times = parseInt(timesPerDay);
-    if (!isNaN(times) && times > 0) {
+    // Solo auto-calcular si:
+    // 1. No estamos editando un ejercicio existente, O
+    // 2. No se han hecho ediciones manuales
+    if (!isEditing || !hasManualEdits) {
+      const times = parseInt(timesPerDay || "1");
+      if (!isNaN(times) && times > 0 && startTime && endTime) {
+        const calculated = calculateScheduledTimes(startTime, endTime, times);
+        setScheduledTimes(calculated);
+      }
+    }
+  }, [startTime, endTime, timesPerDay, isEditing, hasManualEdits]);
+
+  // Función para recalcular horarios manualmente
+  const handleRecalculateTimes = () => {
+    const times = parseInt(timesPerDay || "1");
+    if (!isNaN(times) && times > 0 && startTime && endTime) {
       const calculated = calculateScheduledTimes(startTime, endTime, times);
       setScheduledTimes(calculated);
+      setHasManualEdits(false); // Reset manual edits flag
     }
-  }, [startTime, endTime, timesPerDay]);
+  };
 
   const exerciseTypes: ExerciseType[] = [
     "caminata",
@@ -399,6 +421,43 @@ export default function AddEditExerciseScreen({
           </View>
         </View>
 
+        {/* Horarios calculados - editable */}
+        {scheduledTimes.length > 0 && (
+          <View className="mb-4">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-gray-700 font-semibold">
+                Horarios programados
+              </Text>
+              <TouchableOpacity
+                onPress={handleRecalculateTimes}
+                className="bg-gray-200 px-3 py-1.5 rounded-lg"
+              >
+                <Text className="text-gray-700 text-sm font-medium">
+                  Recalcular
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text className="text-gray-500 text-sm mb-2">
+              Toca cada horario para ajustarlo manualmente
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {scheduledTimes.map((time, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => {
+                    setEditingTimeIndex(index);
+                    setShowTimePickerForIndex(true);
+                  }}
+                  className="bg-blue-100 px-4 py-3 rounded-xl border border-blue-300 flex-row items-center gap-2"
+                >
+                  <Clock size={18} color="#2563EB" />
+                  <Text className="text-blue-700 font-semibold">{time}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Fecha de inicio */}
         <View className="mb-4">
           <Text className="text-gray-700 font-semibold mb-2">
@@ -468,26 +527,6 @@ export default function AddEditExerciseScreen({
             </View>
           )}
         </View>
-
-        {/* Horarios calculados */}
-        {scheduledTimes.length > 0 && (
-          <View className="mb-4 bg-blue-50 p-4 rounded-xl">
-            <View className="flex-row items-center mb-2">
-              <Clock size={20} color="#374151" strokeWidth={2} />
-              <Text className="text-gray-700 font-semibold ml-2">
-                Horarios programados
-              </Text>
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              {scheduledTimes.map((time, index) => (
-                <View key={index} className="bg-white px-4 py-2 rounded-lg">
-                  <Text className="text-blue-600 font-semibold">{time}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
         {/* Selector de notificación */}
         <View className="mb-4">
           <NotificationSelector
@@ -533,6 +572,32 @@ export default function AddEditExerciseScreen({
         }}
         onCancel={() => setShowDatePicker(false)}
         title="Seleccionar Fecha de Inicio"
+      />
+
+      {/* Time Picker Drawer para editar horarios individuales */}
+      <DatePickerDrawer
+        visible={showTimePickerForIndex}
+        mode="time"
+        value={
+          editingTimeIndex !== null ? scheduledTimes[editingTimeIndex] : "12:00"
+        }
+        onConfirm={(value) => {
+          if (editingTimeIndex !== null) {
+            const newTimes = [...scheduledTimes];
+            newTimes[editingTimeIndex] = value as string;
+            // Ordenar los horarios
+            newTimes.sort();
+            setScheduledTimes(newTimes);
+            setHasManualEdits(true); // Marcar que se editó manualmente
+          }
+          setShowTimePickerForIndex(false);
+          setEditingTimeIndex(null);
+        }}
+        onCancel={() => {
+          setShowTimePickerForIndex(false);
+          setEditingTimeIndex(null);
+        }}
+        title="Ajustar Horario"
       />
     </SafeAreaView>
   );

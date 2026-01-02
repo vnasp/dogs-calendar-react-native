@@ -23,6 +23,7 @@ import AddEditMedicationScreen from "./screens/AddEditMedicationScreen";
 import MedicalHistoryScreen from "./screens/MedicalHistoryScreen";
 import SharedAccessScreen from "./screens/SharedAccessScreen";
 import MealTimesSettingsScreen from "./screens/MealTimesSettingsScreen";
+import NotificationsDiagnosticsScreen from "./screens/NotificationsDiagnosticsScreen";
 import Footer from "./components/Footer";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { DogsProvider } from "./context/DogsContext";
@@ -46,7 +47,8 @@ type Screen =
   | "addEditMedication"
   | "medicalHistory"
   | "sharedAccess"
-  | "mealTimesSettings";
+  | "mealTimesSettings"
+  | "notificationsDiagnostics";
 
 function MainApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -105,6 +107,8 @@ function MainApp() {
 
   const navigateToSharedAccess = () => setCurrentScreen("sharedAccess");
   const navigateToMealTimes = () => setCurrentScreen("mealTimesSettings");
+  const navigateToNotificationsDiagnostics = () =>
+    setCurrentScreen("notificationsDiagnostics");
 
   const renderScreen = () => {
     if (authLoading) {
@@ -124,6 +128,9 @@ function MainApp() {
             onNavigateToExercises={navigateToExercises}
             onNavigateToMedications={navigateToMedications}
             onNavigateToSharedAccess={navigateToSharedAccess}
+            onNavigateToNotificationsDiagnostics={
+              navigateToNotificationsDiagnostics
+            }
           />
         );
       case "dogsList":
@@ -206,6 +213,10 @@ function MainApp() {
             onNavigateBack={() => setCurrentScreen("dogsList")}
           />
         );
+      case "notificationsDiagnostics":
+        return (
+          <NotificationsDiagnosticsScreen onNavigateBack={navigateToHome} />
+        );
       default:
         return (
           <HomeScreen
@@ -214,6 +225,9 @@ function MainApp() {
             onNavigateToExercises={navigateToExercises}
             onNavigateToMedications={navigateToMedications}
             onNavigateToSharedAccess={navigateToSharedAccess}
+            onNavigateToNotificationsDiagnostics={
+              navigateToNotificationsDiagnostics
+            }
           />
         );
     }

@@ -26,6 +26,7 @@ interface HomeScreenProps {
   onNavigateToExercises: () => void;
   onNavigateToMedications: () => void;
   onNavigateToSharedAccess: () => void;
+  onNavigateToNotificationsDiagnostics?: () => void;
 }
 
 export default function HomeScreen({
@@ -34,6 +35,7 @@ export default function HomeScreen({
   onNavigateToExercises,
   onNavigateToMedications,
   onNavigateToSharedAccess,
+  onNavigateToNotificationsDiagnostics,
 }: HomeScreenProps) {
   const {
     appointments,
@@ -289,6 +291,13 @@ export default function HomeScreen({
   };
 
   const testNotification = async () => {
+    // Si hay función de navegación, ir a la pantalla de diagnóstico
+    if (onNavigateToNotificationsDiagnostics) {
+      onNavigateToNotificationsDiagnostics();
+      return;
+    }
+
+    // Fallback: hacer una prueba rápida si no hay navegación
     try {
       console.log("🔔 Probando notificaciones...");
 
@@ -302,8 +311,6 @@ export default function HomeScreen({
         );
         return;
       }
-
-      console.log("📤 Programando notificación...");
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: "🐕 Prueba de Notificación",

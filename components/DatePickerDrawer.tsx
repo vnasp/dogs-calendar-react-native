@@ -33,9 +33,21 @@ export default function DatePickerDrawer({
 
   // Función para convertir string time (HH:mm) a Date
   const timeStringToDate = (timeString: string): Date => {
-    const [hours, minutes] = timeString.split(":");
+    if (!timeString || typeof timeString !== "string") {
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      return date;
+    }
+    const parts = timeString.split(":");
+    const hours = parseInt(parts[0] || "12", 10);
+    const minutes = parseInt(parts[1] || "0", 10);
     const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    date.setHours(
+      isNaN(hours) ? 12 : hours,
+      isNaN(minutes) ? 0 : minutes,
+      0,
+      0
+    );
     return date;
   };
 
@@ -47,18 +59,32 @@ export default function DatePickerDrawer({
   };
 
   // Obtener el valor inicial como Date para el picker
-  const getInitialDate = (): Date => {
-    if (mode === "time" && typeof value === "string") {
-      return timeStringToDate(value);
+  const getPickerDate = (): Date => {
+    if (mode === "time") {
+      // Si tempValue ya es un string actualizado, usarlo
+      if (typeof tempValue === "string") {
+        return timeStringToDate(tempValue);
+      }
+      // Si no, usar el value original
+      if (typeof value === "string") {
+        return timeStringToDate(value);
+      }
     }
-    return value as Date;
+    // Para date y datetime, usar tempValue si es Date, sino usar value
+    return (tempValue instanceof Date ? tempValue : value) as Date;
   };
 
   // Manejar el cambio en el picker
   const handleChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    // Ignorar eventos de cancelación
+    if (event.type === "dismissed") {
+      return;
+    }
+
     if (selectedDate) {
       if (mode === "time") {
-        setTempValue(dateToTimeString(selectedDate));
+        const timeString = dateToTimeString(selectedDate);
+        setTempValue(timeString);
       } else {
         setTempValue(selectedDate);
       }
@@ -110,7 +136,7 @@ export default function DatePickerDrawer({
           {/* Picker */}
           <View className="px-6 pt-4">
             <DateTimePicker
-              value={getInitialDate()}
+              value={getPickerDate()}
               mode={mode === "datetime" ? "datetime" : mode}
               display="spinner"
               onChange={handleChange}

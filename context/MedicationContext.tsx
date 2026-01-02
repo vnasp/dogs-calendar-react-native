@@ -9,10 +9,12 @@ import React, {
 import { supabase, formatLocalDate } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
+import * as Notifications from "expo-notifications";
 import {
   scheduleMedicationNotifications,
   cancelMedicationNotifications,
   requestNotificationPermissions,
+  scheduleDailyNotificationRefresh,
 } from "../utils/notificationService";
 
 export type ScheduleType = "hours" | "meals";
@@ -136,7 +138,14 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
 
   // Solicitar permisos y cargar datos al iniciar
   useEffect(() => {
-    requestNotificationPermissions();
+    const initNotifications = async () => {
+      await requestNotificationPermissions();
+      // Programar tarea diaria de refresco a las 23:59
+      await scheduleDailyNotificationRefresh();
+    };
+
+    initNotifications();
+
     if (user) {
       loadMedications();
     } else {
@@ -191,6 +200,30 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
+      console.log(`📊 Cargando ${data?.length || 0} medicamentos`);
+
+      // IMPORTANTE: Cancelar TODAS las notificaciones de medicamentos antes de reprogramar
+      // Esto evita duplicados y problemas con el sistema viejo
+      const allScheduled =
+        await Notifications.getAllScheduledNotificationsAsync();
+      const medicationNotifs = allScheduled.filter(
+        (n) => n.content.data?.medicationId
+      );
+      if (medicationNotifs.length > 0) {
+        console.log(
+          `🗑️  Limpiando ${medicationNotifs.length} notificaciones de medicamentos existentes`
+        );
+        for (const notif of medicationNotifs) {
+          try {
+            await Notifications.cancelScheduledNotificationAsync(
+              notif.identifier
+            );
+          } catch (error) {
+            console.error("Error cancelando notificación:", error);
+          }
+        }
+      }
+
       const medicationsWithDates = await Promise.all(
         (data || []).map(async (med: any) => {
           // Parsear fechas en la zona horaria local
@@ -235,6 +268,7 @@ export function MedicationProvider({ children }: { children: ReactNode }) {
           endDateOnly.setHours(0, 0, 0, 0);
 
           if (medication.isActive && endDateOnly >= today) {
+            // Programar notificaciones (ya limpiamos todas al inicio)
             const notificationIds = await scheduleMedicationNotifications(
               medication.id,
               medication.startDate,

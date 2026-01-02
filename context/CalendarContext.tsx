@@ -10,6 +10,7 @@ import { supabase, formatLocalDate } from "../utils/supabase";
 import { useAuth } from "./AuthContext";
 import { NotificationTime } from "../components/NotificationSelector";
 import { Completion } from "./MedicationContext";
+import * as Notifications from "expo-notifications";
 import {
   scheduleAppointmentNotification,
   cancelAppointmentNotifications,
@@ -215,6 +216,22 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         .order("date", { ascending: true });
 
       if (error) throw error;
+
+      console.log(`📊 Cargando ${data?.length || 0} citas`);
+
+      // IMPORTANTE: Cancelar TODAS las notificaciones de citas antes de reprogramar
+      const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+      const appointmentNotifs = allScheduled.filter(n => n.content.data?.appointmentId);
+      if (appointmentNotifs.length > 0) {
+        console.log(`🗑️  Limpiando ${appointmentNotifs.length} notificaciones de citas existentes`);
+        for (const notif of appointmentNotifs) {
+          try {
+            await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+          } catch (error) {
+            console.error("Error cancelando notificación:", error);
+          }
+        }
+      }
 
       const appointmentsWithDates = await Promise.all(
         (data || []).map(async (apt: any) => {
