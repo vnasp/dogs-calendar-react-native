@@ -14,13 +14,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pterraza.pewosapp",
+      "bundleIdentifier": "com.vnasp.pewosapp",
       "infoPlist": {
         "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
-      "package": "com.pterraza.pewosapp",
+      "package": "com.vnasp.pewosapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

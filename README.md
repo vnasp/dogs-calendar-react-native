@@ -2,25 +2,16 @@
 
 ## Instalación y configuración para iOS
 
-1. Instalar dependencias:
+1. Cambiar com.vnasp.pewosapp por com.pterraza87.pewosapp
+
+2. Instalar dependencias:
 
    ```bash
    npm install
    ```
 
-2. Prebuild del proyecto para iOS:
+3. Build standalone del proyecto para iOS:
 
    ```bash
-   npx expo prebuild --platform ios --clean
-   ```
-
-3. Instalar pods de iOS:
-
-   ```bash
-   cd ios && pod install --repo-update && cd ..
-   ```
-
-4. Abrir el workspace en Xcode:
-   ```bash
-   open ios/PewosApp.xcworkspace
+   npx expo run:ios --device --configuration Release
    ```
